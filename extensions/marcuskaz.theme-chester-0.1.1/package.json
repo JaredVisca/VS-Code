@@ -1,0 +1,32 @@
+{
+	"name": "theme-chester",
+	"displayName": "Chester",
+	"description": "Chester dark color theme",
+	"version": "0.1.1",
+	"publisher": "marcuskaz",
+	"engines": {
+		"vscode": "^1.0.0"
+	},
+	"categories": [
+		"Themes"
+	],
+	"contributes": {
+		"themes": [
+			{
+				"label": "Chester",
+				"uiTheme": "vs-dark",
+				"path": "./themes/Chester.tmTheme"
+			}
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mkaz/chester-colors.git"
+	},
+	"homepage": "https://github.com/mkaz/chester-colors/tree/master/theme-chester",
+	"__metadata": {
+		"id": "3cebe58e-ea14-4345-8a66-149af6bdb59e",
+		"publisherId": "2fe8c7b7-9924-4083-be3d-b934de84a1e0",
+		"publisherDisplayName": "Marcus Kazmierczak"
+	}
+}

@@ -1,0 +1,42 @@
+{
+	"name": "theme-retro",
+	"displayName": "Retro Theme",
+	"description": "A Retro Theme Inspired in The Guardians of The Galaxy and the 80s",
+	"version": "0.1.0",
+	"publisher": "retrotheme",
+	"license": "MIT",
+	"maintainers": [
+		"Rafael Fragoso <rafaelfragosom@gmail.com>"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/retro-theme/visual-studio-code.git"
+	},
+	"bugs": {
+		"url": "https://github.com/retro-theme/visual-studio-code/issues"
+	},
+	"engines": {
+		"vscode": "^1.11.0"
+	},
+	"categories": [
+		"Themes"
+	],
+	"galleryBanner": {
+		"color": "#141212",
+		"theme": "dark"
+	},
+	"contributes": {
+		"themes": [
+			{
+				"label": "Retro Theme",
+				"uiTheme": "vs-dark",
+				"path": "./themes/Retro.tmTheme"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "3d137140-d025-4c7e-988f-0f63319777b1",
+		"publisherId": "e86279a3-150f-4e74-9cba-d0a4829a3754",
+		"publisherDisplayName": "Retro Theme"
+	}
+}

@@ -1,0 +1,40 @@
+{
+	"name": "theme-flatui",
+	"displayName": "Flat UI",
+	"description": "A flat ui inspired syntax for vscode, now with optional UI",
+	"version": "3.0.2",
+	"publisher": "danibram",
+	"engines": {
+		"vscode": "*"
+	},
+	"categories": [
+		"Themes"
+	],
+	"bugs": {
+		"url": "https://github.com/danibram/flat-ui-syntax-vscode/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/danibram/flat-ui-syntax-vscode.git"
+	},
+	"icon": "icon.svg",
+	"contributes": {
+		"themes": [
+			{
+				"label": "Flat UI (+GUI)",
+				"uiTheme": "vs-dark",
+				"path": "./themes/flatui-gui.json"
+			},
+			{
+				"label": "Flat UI",
+				"uiTheme": "vs-dark",
+				"path": "./themes/flatui.json"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "c902ace3-9c36-4104-9002-1bec84691969",
+		"publisherId": "570c6814-5ad2-4576-b7ea-150399dea590",
+		"publisherDisplayName": "Daniel Biedma"
+	}
+}

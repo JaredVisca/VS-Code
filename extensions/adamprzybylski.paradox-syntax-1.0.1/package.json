@@ -1,0 +1,70 @@
+{
+	"name": "paradox-syntax",
+	"displayName": "Paradox Syntax",
+	"description": "Provides syntax support for '.txt' and '.mod' files found in games from Paradox Interactive.",
+	"version": "1.0.1",
+	"publisher": "adamprzybylski",
+	"icon": "images/Icon.png",
+	"galleryBanner": {
+		"color": "#1E1E1E",
+		"theme": "dark"
+	},
+	"license": "SEE LICENSE IN LICENSE.txt",
+	"bugs": {
+		"url": "https://bitbucket.org/Rivva/paradox-syntax/issues"
+	},
+	"homepage": "https://bitbucket.org/Rivva/paradox-syntax/overview",
+	"repository": {
+		"type": "git",
+		"url": "https://bitbucket.org/Rivva/paradox-syntax.git"
+	},
+	"engines": {
+		"vscode": "^1.0.0"
+	},
+	"categories": [
+		"Languages",
+		"Themes",
+		"Snippets"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "paradox",
+				"aliases": [
+					"Paradox",
+					"paradox"
+				],
+				"extensions": [
+					".mod",
+					".txt"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "paradox",
+				"scopeName": "source.mod",
+				"path": "./syntaxes/paradox.tmLanguage.json"
+			}
+		],
+		"themes": [
+			{
+				"label": "Paradox Theme",
+				"uiTheme": "vs-dark",
+				"path": "./themes/Paradox-Dimmed.tmTheme"
+			}
+		],
+		"snippets": [
+			{
+				"language": "paradox",
+				"path": "./snippets/paradox.snippets.json"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "04f4b7c6-4692-4b45-ada6-1d7085eca0ae",
+		"publisherId": "b7b694f8-1235-49f5-b416-30e201bc528d",
+		"publisherDisplayName": "Adam Przybylski"
+	}
+}

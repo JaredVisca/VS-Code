@@ -1,0 +1,33 @@
+{
+	"name": "Theme-Hail",
+	"displayName": "Hail Theme",
+	"description": "Hail Theme ported from the Hail TextMate Theme",
+	"version": "0.0.3",
+	"publisher": "gerane",
+	"engines": {
+		"vscode": "^0.10.1"
+	},
+	"categories": [
+		"Themes"
+	],
+	"icon": "icon.png",
+	"homepage": "https://github.com/gerane/VSCodeThemes/blob/master/gerane.Theme-Hail/README.md",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/gerane/VSCodeThemes.git"
+	},
+	"contributes": {
+		"themes": [
+			{
+				"label": "Hail",
+				"uiTheme": "vs-dark",
+				"path": "./themes/Hail.tmTheme"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "9013521d-3a01-48e2-bdf3-1052b83a15bd",
+		"publisherId": "a5c25faf-bf60-4941-81b9-9a852b96c5fb",
+		"publisherDisplayName": "gerane"
+	}
+}

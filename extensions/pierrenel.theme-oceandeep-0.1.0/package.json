@@ -1,0 +1,29 @@
+{
+	"name": "theme-oceandeep",
+	"displayName": "OceanDeep",
+	"description": "VS Code port of VIM's OceanDeep theme",
+	"homepage": "https://github.com/pierrenel/VSOceanDeep/blob/master/README.md",
+	"version": "0.1.0",
+	"publisher": "pierrenel",
+	"engines": {
+		"vscode": "^1.10.0"
+	},
+	"icon": "icon.png",
+	"categories": [
+		"Themes"
+	],
+	"contributes": {
+		"themes": [
+			{
+				"label": "OceanDeep",
+				"uiTheme": "vs-dark",
+				"path": "./themes/OceanDeep.tmTheme"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "3fc75550-ea46-4815-8caf-137acc536a4e",
+		"publisherId": "2892b856-7bd2-4636-8908-f2b7df65f377",
+		"publisherDisplayName": "pierrenel"
+	}
+}

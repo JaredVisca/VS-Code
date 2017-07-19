@@ -1,0 +1,97 @@
+{
+	"If statement": {
+		"prefix": "if",
+		"body": [
+			"if = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Else statement": {
+		"prefix": "else",
+		"body": [
+			"else = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Limit statement": {
+		"prefix": "limit",
+		"body": [
+			"limit = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Immediate statement": {
+		"prefix": "immediate",
+		"body": [
+			"immediate = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Trigger statement": {
+		"prefix": "trigger",
+		"body": [
+			"trigger = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Option statement": {
+		"prefix": "option",
+		"body": [
+			"option = {",
+			"	name = ${name}",
+			"	custom_tooltip = \"${name}.tooltip\"",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Hidden_Effect statement": {
+		"prefix": "hidden_effect",
+		"body": [
+			"hidden_effect = {",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Ai_Weight statement": {
+		"prefix": "ai_weight",
+		"body": [
+			"ai_weight = {",
+			"	weight = $0",
+			"}"
+		]
+	},
+
+	"Event structure": {
+		"prefix": "_event structure",
+		"body": [
+			"${EventType}_event = {",
+			"	id = ${Namespace}.${Id}",
+			"	title = \"${Namespace}.${Id}.name\"",
+			"	desc = \"${Namespace}.${Id}.desc\"",
+			"	picture = GFX_evt_${Picture}",
+			"	is_triggered_only = ${Condition}",
+			"",
+			"	$0",
+			"}"
+		]
+	},
+
+	"Event trigger": {
+		"prefix": "_event trigger",
+		"body": [
+			"${EventType}_event = { id = ${Namespace}.${Id} }"
+		]
+	}
+}

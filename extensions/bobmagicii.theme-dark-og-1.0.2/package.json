@@ -1,0 +1,45 @@
+{
+	"name": "theme-dark-og",
+	"displayName": "VS Code Dark OG",
+	"description": "The way the Dark theme was day one.",
+	"version": "1.0.2",
+	"publisher": "bobmagicii",
+	"icon": "images/icon.png",
+	"galleryBanner": {
+		"color": "#413d3d",
+		"theme": "dark"
+	},
+	"engines": {
+		"vscode": "*"
+	},
+	"categories": [
+		"Themes"
+	],
+	"license": "BSD-2-Clause",
+	"bugs": {
+		"url": ""
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bobmagicii/vscode-theme-dark-og"
+	},
+	"contributes": {
+		"themes": [
+			{
+				"label": "Dark OG",
+				"uiTheme": "vs-dark",
+				"path": "themes/dark-og.tmTheme"
+			},
+			{
+				"label": "Dark OG Desat",
+				"uiTheme": "vs-dark",
+				"path": "themes/dark-og-desat.tmTheme"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "26bc0a44-0b5c-4411-af1e-260f47be79c5",
+		"publisherId": "a8924e36-94c0-497b-91ab-ff6cba0e459e",
+		"publisherDisplayName": "Bob Majdak Jr"
+	}
+}

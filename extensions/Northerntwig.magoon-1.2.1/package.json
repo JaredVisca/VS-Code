@@ -1,0 +1,33 @@
+{
+	"name": "magoon",
+	"displayName": "Magoon",
+	"description": "A clean, and comforting Visual Studio Code theme.",
+	"icon": "images/mrmagoon.png",
+	"version": "1.2.1",
+	"publisher": "Northerntwig",
+	"galleryBanner": {
+		"color": "#232F39",
+		"theme": "dark"
+	},
+	"license": "SEE LICENSE IN LICENSE.md",
+	"engines": {
+		"vscode": "^1.11.0"
+	},
+	"categories": [
+		"Themes"
+	],
+	"contributes": {
+		"themes": [
+			{
+				"label": "Magoon",
+				"uiTheme": "vs-dark",
+				"path": "./themes/Magoon-theme.json"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "7e98d8ef-3a98-49c0-b561-1af1807d6acc",
+		"publisherId": "204c181c-a7cd-4103-aca3-e856abc37c8e",
+		"publisherDisplayName": "Northerntwig"
+	}
+}

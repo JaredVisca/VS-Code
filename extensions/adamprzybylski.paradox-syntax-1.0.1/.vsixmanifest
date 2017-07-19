@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="paradox-syntax" Version="1.0.1" Publisher="adamprzybylski"/>
+    <DisplayName>Paradox Syntax</DisplayName>
+    <Description xml:space="preserve">Provides syntax support for &#39;.txt&#39; and &#39;.mod&#39; files found in games from Paradox Interactive.</Description>
+    <Tags>theme,color-theme,snippet,paradox,Paradox,__ext_.mod,__ext_.txt</Tags>
+    <Categories>Languages,Themes,Snippets</Categories>
+    <GalleryFlags>Public</GalleryFlags>
+    <Badges></Badges>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.0.0" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+      
+        <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://bitbucket.org/Rivva/paradox-syntax.git" />
+        <Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="https://bitbucket.org/Rivva/paradox-syntax.git" />
+        
+          <Property Id="Microsoft.VisualStudio.Services.Links.Repository" Value="https://bitbucket.org/Rivva/paradox-syntax.git" />
+        
+      
+      <Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="https://bitbucket.org/Rivva/paradox-syntax/issues" />
+      <Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="https://bitbucket.org/Rivva/paradox-syntax/overview" />
+      <Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="#1E1E1E" />
+      <Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="dark" />
+      <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
+    </Properties>
+    <License>extension/LICENSE.txt</License>
+    <Icon>extension/images/Icon.png</Icon>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+  </Installation>
+  <Dependencies/>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" /><Asset Type="Microsoft.VisualStudio.Services.Content.Changelog" Path="extension/CHANGELOG.md" Addressable="true" /><Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true" /><Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/images/Icon.png" Addressable="true" />
+  </Assets>
+</PackageManifest>

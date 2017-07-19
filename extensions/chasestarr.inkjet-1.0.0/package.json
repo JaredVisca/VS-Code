@@ -1,0 +1,36 @@
+{
+	"name": "inkjet",
+	"displayName": "inkjet",
+	"description": "",
+	"version": "1.0.0",
+	"publisher": "chasestarr",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/chasestarr/inkjet.git"
+	},
+	"engines": {
+		"vscode": "^1.12.0"
+	},
+	"icon": "images/icon.png",
+	"galleryBanner": {
+		"color": "#569CD6",
+		"theme": "dark"
+	},
+	"categories": [
+		"Themes"
+	],
+	"contributes": {
+		"themes": [
+			{
+				"label": "inkjet",
+				"uiTheme": "vs-dark",
+				"path": "./themes/inkjet-color-theme.json"
+			}
+		]
+	},
+	"__metadata": {
+		"id": "b05737b8-8532-45ba-a8c5-0ac468840cf4",
+		"publisherId": "4854b518-658c-4a65-b715-de8a81cbba6b",
+		"publisherDisplayName": "chasestarr"
+	}
+}
