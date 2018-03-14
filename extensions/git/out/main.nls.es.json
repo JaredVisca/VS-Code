@@ -1,0 +1,10 @@
+[
+	"Buscando git en: {0}",
+	"Usando GIT {0} desde {1}",
+	"Descargar Git",
+	"No volver a mostrar",
+	"Git no encontrado. Instálalo o configúralo usando la configuración 'git.path'.",
+	"Actualizar GIT",
+	"No volver a mostrar",
+	"Parece que tiene instalado GIT {0}. El código funciona mejor con GIT >= 2"
+]

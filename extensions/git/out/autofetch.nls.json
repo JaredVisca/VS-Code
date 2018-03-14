@@ -1,0 +1,16 @@
+{
+	"messages": [
+		"Yes",
+		"Read More",
+		"No",
+		"Ask Me Later",
+		"Would you like Code to periodically run `git fetch`?"
+	],
+	"keys": [
+		"yes",
+		"read more",
+		"no",
+		"not now",
+		"suggest auto fetch"
+	]
+}

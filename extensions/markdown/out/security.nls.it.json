@@ -1,0 +1,13 @@
+[
+	"Strict",
+	"Carica solo contenuto protetto",
+	"Consenti contenuto non protetto",
+	"Consente il caricamento di contenuti tramite HTTP",
+	"Disabilita",
+	"Consente l'esecuzione di tutti i contenuti e script. Scelta non consigliata",
+	"Altre informazioni",
+	"Abilita anteprima degli avvisi di protezione in questa area di lavoro",
+	"Disabilita anteprima degli avvisi di protezione in questa area di lavoro",
+	"Non influenza il livello di sicurezza del contenuto",
+	"Seleziona impostazioni di protezione per le anteprime Markdown in questa area di lavoro"
+]

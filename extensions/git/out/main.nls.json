@@ -1,0 +1,22 @@
+{
+	"messages": [
+		"Looking for git in: {0}",
+		"Using git {0} from {1}",
+		"Download Git",
+		"Don't show again",
+		"Git not found. Install it or configure it using the 'git.path' setting.",
+		"Update Git",
+		"Don't show again",
+		"You seem to have git {0} installed. Code works best with git >= 2"
+	],
+	"keys": [
+		"looking",
+		"using git",
+		"downloadgit",
+		"neverShowAgain",
+		"notfound",
+		"updateGit",
+		"neverShowAgain",
+		"git20"
+	]
+}

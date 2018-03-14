@@ -1,0 +1,26 @@
+{
+	"messages": [
+		"Select code action to apply",
+		"Acquiring typings...",
+		"Acquiring typings definitions for IntelliSense.",
+		"Auto import from {0}",
+		"Auto import from {0}"
+	],
+	"keys": [
+		"selectCodeAction",
+		{
+			"key": "acquiringTypingsLabel",
+			"comment": [
+				"Typings refers to the *.d.ts typings files that power our IntelliSense. It should not be localized"
+			]
+		},
+		{
+			"key": "acquiringTypingsDetail",
+			"comment": [
+				"Typings refers to the *.d.ts typings files that power our IntelliSense. It should not be localized"
+			]
+		},
+		"autoImportLabel",
+		"autoImportLabel"
+	]
+}

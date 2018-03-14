@@ -1,0 +1,10 @@
+{
+	"messages": [
+		"Preview {0}",
+		"Could not load 'markdown.styles': {0}"
+	],
+	"keys": [
+		"previewTitle",
+		"onPreviewStyleLoadError"
+	]
+}
