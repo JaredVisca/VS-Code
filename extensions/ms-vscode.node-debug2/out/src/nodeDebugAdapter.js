@@ -22,7 +22,7 @@ const utils = require("./utils");
 const errors = require("./errors");
 const wsl = require("./wslSupport");
 const nls = require("vscode-nls");
-const localize = nls.config(process.env.VSCODE_NLS_CONFIG)(__filename);
+const localize = nls.loadMessageBundle(__filename);
 const DefaultSourceMapPathOverrides = {
     'webpack:///./~/*': '${cwd}/node_modules/*',
     'webpack:///./*': '${cwd}/*',
@@ -71,14 +71,14 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
             }
             else if (runtimeExecutable) {
                 if (!path.isAbsolute(runtimeExecutable)) {
-                    const re = pathUtils.findOnPath(runtimeExecutable);
+                    const re = pathUtils.findOnPath(runtimeExecutable, args.env);
                     if (!re) {
                         return this.getRuntimeNotOnPathErrorResponse(runtimeExecutable);
                     }
                     runtimeExecutable = re;
                 }
                 else {
-                    const re = pathUtils.findExecutable(runtimeExecutable);
+                    const re = pathUtils.findExecutable(runtimeExecutable, args.env);
                     if (!re) {
                         return this.getNotExistErrorResponse('runtimeExecutable', runtimeExecutable);
                     }
@@ -86,7 +86,7 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
                 }
             }
             else {
-                if (!pathUtils.findOnPath(NodeDebugAdapter.NODE)) {
+                if (!pathUtils.findOnPath(NodeDebugAdapter.NODE, args.env)) {
                     return Promise.reject(errors.runtimeNotFound(NodeDebugAdapter.NODE));
                 }
                 // use node from PATH
@@ -202,7 +202,7 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
         const _super = name => super[name];
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                yield _super("attach").call(this, args);
+                return _super("attach").call(this, args);
             }
             catch (err) {
                 if (err.format && err.format.indexOf('Cannot connect to runtime process') >= 0) {
@@ -367,9 +367,12 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
      * Override so that -core's call on attach will be ignored, and we can wait until the first break when ready to set BPs.
      */
     sendInitializedEvent() {
-        if (!this._waitingForEntryPauseEvent) {
-            super.sendInitializedEvent();
-        }
+        const _super = name => super[name];
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this._waitingForEntryPauseEvent) {
+                return _super("sendInitializedEvent").call(this);
+            }
+        });
     }
     configurationDone() {
         if (!this.chrome) {
@@ -424,9 +427,11 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
                 this._expectingStopReason = 'entry';
                 this._entryPauseEvent = notification;
                 this._waitingForEntryPauseEvent = false;
-                if (this.normalAttachMode) {
-                    // In attach mode, and we did pause right away,
-                    // so assume --debug-brk was set and we should show paused
+                if ((this.normalAttachMode && this._launchAttachArgs.stopOnEntry !== false) ||
+                    (this.isExtensionHost() && this._launchAttachArgs.stopOnEntry)) {
+                    // In attach mode, and we did pause right away, so assume --debug-brk was set and we should show paused.
+                    // In normal attach mode, assume stopOnEntry unless explicitly disabled.
+                    // In extensionhost mode, only when stopOnEntry is explicitly enabled
                     this._continueAfterConfigDone = false;
                 }
                 return this.getNodeProcessDetailsIfNeeded()
@@ -487,8 +492,14 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
      * During attach, we don't know whether it's paused when attaching.
      */
     beginWaitingForDebuggerPaused() {
+        const checkPausedInterval = 50;
+        const timeout = this._launchAttachArgs.timeout;
         // Wait longer in launch mode - it definitely should be paused.
-        let count = this._attachMode ? 10 : 100;
+        let count = this._attachMode ?
+            10 :
+            (typeof timeout === 'number' ?
+                Math.floor(timeout / checkPausedInterval) :
+                100);
         vscode_chrome_debug_core_1.logger.log(Date.now() / 1000 + ': Waiting for initial debugger pause');
         const id = setInterval(() => {
             if (this._entryPauseEvent || this._isTerminated) {
@@ -504,7 +515,7 @@ class NodeDebugAdapter extends vscode_chrome_debug_core_1.ChromeDebugAdapter {
                 this.getNodeProcessDetailsIfNeeded()
                     .then(() => this.sendInitializedEvent());
             }
-        }, 50);
+        }, checkPausedInterval);
     }
     threadName() {
         return `Node (${this._nodeProcessId})`;

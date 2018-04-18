@@ -127,6 +127,12 @@ class TryCompleteJsDocCommand {
             if (!res || !res.body) {
                 return undefined;
             }
+            // Workaround for #43619
+            // docCommentTemplate previously returned undefined for empty jsdoc templates.
+            // TS 2.7 now returns a single line doc comment, which breaks indentation.
+            if (res.body.newText === '/** */') {
+                return undefined;
+            }
             return TryCompleteJsDocCommand.templateToSnippet(res.body.newText);
         }, () => undefined);
     }
@@ -138,7 +144,7 @@ class TryCompleteJsDocCommand {
         template = template.replace(/\* @param([ ]\{\S+\})?\s+(\S+)\s*$/gm, (_param, type, post) => {
             let out = '* @param ';
             if (type === ' {any}' || type === ' {*}') {
-                out += `{*\$\{${snippetIndex++}\}} `;
+                out += `{\$\{${snippetIndex++}:*\}} `;
             }
             else if (type) {
                 out += type + ' ';
@@ -157,4 +163,4 @@ class TryCompleteJsDocCommand {
     }
 }
 TryCompleteJsDocCommand.COMMAND_NAME = '_typeScript.tryCompleteJsDoc';
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/features\jsDocCompletionProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/features\jsDocCompletionProvider.js.map

@@ -18,6 +18,11 @@ class DefaultCompletionItemProvider {
         const mappedLanguages = util_1.getMappingForIncludedLanguages();
         const isSyntaxMapped = mappedLanguages[document.languageId] ? true : false;
         let syntax = util_1.getEmmetMode((isSyntaxMapped ? mappedLanguages[document.languageId] : document.languageId), excludedLanguages);
+        if (!syntax
+            || emmetConfig['showExpandedAbbreviation'] === 'never'
+            || ((isSyntaxMapped || syntax === 'jsx') && emmetConfig['showExpandedAbbreviation'] !== 'always')) {
+            return;
+        }
         const helper = util_1.getEmmetHelper();
         const extractAbbreviationResults = helper.extractAbbreviation(document, position);
         if (!extractAbbreviationResults) {
@@ -36,11 +41,6 @@ class DefaultCompletionItemProvider {
             if (!syntax || !abbreviationActions_1.isValidLocationForEmmetAbbreviation(document, currentNode, syntax, position, extractAbbreviationResults.abbreviationRange)) {
                 return;
             }
-        }
-        if (!syntax
-            || ((isSyntaxMapped || syntax === 'jsx')
-                && emmetConfig['showExpandedAbbreviation'] !== 'always')) {
-            return;
         }
         let noiseCheckPromise = Promise.resolve();
         // Fix for https://github.com/Microsoft/vscode/issues/32647
@@ -111,4 +111,4 @@ class DefaultCompletionItemProvider {
     }
 }
 exports.DefaultCompletionItemProvider = DefaultCompletionItemProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/defaultCompletionProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/defaultCompletionProvider.js.map

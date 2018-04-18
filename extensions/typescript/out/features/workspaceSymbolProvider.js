@@ -55,23 +55,27 @@ class TypeScriptWorkspaceSymbolProvider {
             searchValue: search
         };
         const response = await this.client.execute('navto', args, token);
+        if (!response.body) {
+            return [];
+        }
         const result = [];
-        const data = response.body;
-        if (data) {
-            for (const item of data) {
-                if (!item.containerName && item.kind === 'alias') {
-                    continue;
-                }
-                const range = convert_1.tsTextSpanToVsRange(item);
-                let label = item.name;
-                if (item.kind === 'method' || item.kind === 'function') {
-                    label += '()';
-                }
-                result.push(new vscode_1.SymbolInformation(label, getSymbolKind(item), item.containerName || '', new vscode_1.Location(this.client.asUrl(item.file), range)));
+        for (const item of response.body) {
+            if (!item.containerName && item.kind === 'alias') {
+                continue;
             }
+            const range = convert_1.tsTextSpanToVsRange(item);
+            const label = TypeScriptWorkspaceSymbolProvider.getLabel(item);
+            result.push(new vscode_1.SymbolInformation(label, getSymbolKind(item), item.containerName || '', new vscode_1.Location(this.client.asUrl(item.file), range)));
         }
         return result;
     }
+    static getLabel(item) {
+        let label = item.name;
+        if (item.kind === 'method' || item.kind === 'function') {
+            label += '()';
+        }
+        return label;
+    }
 }
 exports.default = TypeScriptWorkspaceSymbolProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/features\workspaceSymbolProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/features\workspaceSymbolProvider.js.map

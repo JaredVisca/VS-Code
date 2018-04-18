@@ -8,7 +8,6 @@ const vscode = require("vscode");
 const html_matcher_1 = require("@emmetio/html-matcher");
 const css_parser_1 = require("@emmetio/css-parser");
 const bufferStream_1 = require("./bufferStream");
-const path = require("path");
 let _emmetHelper;
 let _currentExtensionsPath = undefined;
 function getEmmetHelper() {
@@ -24,12 +23,9 @@ function resolveUpdateExtensionsPath() {
         return;
     }
     let extensionsPath = vscode.workspace.getConfiguration('emmet')['extensionsPath'];
-    if (extensionsPath && !path.isAbsolute(extensionsPath)) {
-        extensionsPath = path.join(vscode.workspace.rootPath || '', extensionsPath);
-    }
     if (_currentExtensionsPath !== extensionsPath) {
         _currentExtensionsPath = extensionsPath;
-        _emmetHelper.updateExtensionsPath(_currentExtensionsPath).then(null, (err) => vscode.window.showErrorMessage(err));
+        _emmetHelper.updateExtensionsPath(extensionsPath, vscode.workspace.rootPath).then(null, (err) => vscode.window.showErrorMessage(err));
     }
 }
 exports.resolveUpdateExtensionsPath = resolveUpdateExtensionsPath;
@@ -40,10 +36,10 @@ exports.LANGUAGE_MODES = {
     'haml': ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'xml': ['.', '}', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'xsl': ['!', '.', '}', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
-    'css': [':', ';', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
-    'scss': [':', ';', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+    'css': [':', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+    'scss': [':', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'sass': [':', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
-    'less': [':', ';', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+    'less': [':', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'stylus': [':', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'javascriptreact': ['.', '}', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
     'typescriptreact': ['.', '}', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
@@ -54,7 +50,6 @@ const emmetModes = ['html', 'pug', 'slim', 'haml', 'xml', 'xsl', 'jsx', 'css', '
 // For other languages, users will have to use `emmet.includeLanguages` or
 // language specific extensions can provide emmet completion support
 exports.MAPPED_MODES = {
-    'handlebars': 'html',
     'php': 'html'
 };
 function isStyleSheet(syntax) {
@@ -307,7 +302,9 @@ function getEmmetConfiguration(syntax) {
         showExpandedAbbreviation: emmetConfig['showExpandedAbbreviation'],
         showAbbreviationSuggestions: emmetConfig['showAbbreviationSuggestions'],
         syntaxProfiles,
-        variables: emmetConfig['variables']
+        variables: emmetConfig['variables'],
+        excludeLanguages: emmetConfig['excludeLanguages'],
+        showSuggestionsAsSnippets: emmetConfig['showSuggestionsAsSnippets']
     };
 }
 exports.getEmmetConfiguration = getEmmetConfiguration;
@@ -352,4 +349,4 @@ function getCssPropertyFromDocument(editor, position) {
     }
 }
 exports.getCssPropertyFromDocument = getCssPropertyFromDocument;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/util.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/util.js.map

@@ -116,6 +116,7 @@ exports.activate = activate;
  */
 const languageMappingForCompletionProviders = new Map();
 const completionProvidersMapping = new Map();
+const languagesToSkipCompletionProviders = ['html'];
 function registerCompletionProviders(context) {
     let completionProvider = new defaultCompletionProvider_1.DefaultCompletionItemProvider();
     let includedLanguages = util_1.getMappingForIncludedLanguages();
@@ -137,7 +138,7 @@ function registerCompletionProviders(context) {
         completionProvidersMapping.set(language, provider);
     });
     Object.keys(util_1.LANGUAGE_MODES).forEach(language => {
-        if (!languageMappingForCompletionProviders.has(language)) {
+        if (languagesToSkipCompletionProviders.indexOf(language) === -1 && !languageMappingForCompletionProviders.has(language)) {
             const provider = vscode.languages.registerCompletionItemProvider(language, completionProvider, ...util_1.LANGUAGE_MODES[language]);
             context.subscriptions.push(provider);
             languageMappingForCompletionProviders.set(language, language);
@@ -148,4 +149,4 @@ function registerCompletionProviders(context) {
 function deactivate() {
 }
 exports.deactivate = deactivate;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/extension.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/extension.js.map

@@ -14,8 +14,8 @@ var Strings = require("./utils/strings");
 var errors_1 = require("./utils/errors");
 var vscode_json_languageservice_1 = require("vscode-json-languageservice");
 var languageModelCache_1 = require("./languageModelCache");
-var nls = require("vscode-nls");
-nls.config(process.env['VSCODE_NLS_CONFIG']);
+var jsonc_parser_1 = require("jsonc-parser");
+var foldingProvider_proposed_1 = require("./protocol/foldingProvider.proposed");
 var SchemaAssociationNotification;
 (function (SchemaAssociationNotification) {
     SchemaAssociationNotification.type = new vscode_languageserver_1.NotificationType('json/schemaAssociations');
@@ -62,11 +62,12 @@ connection.onInitialize(function (params) {
     var capabilities = {
         // Tell the client that the server works in FULL text document sync mode
         textDocumentSync: documents.syncKind,
-        completionProvider: clientSnippetSupport ? { resolveProvider: true, triggerCharacters: ['"', ':'] } : null,
+        completionProvider: clientSnippetSupport ? { resolveProvider: true, triggerCharacters: ['"', ':'] } : void 0,
         hoverProvider: true,
         documentSymbolProvider: true,
         documentRangeFormattingProvider: false,
-        colorProvider: true
+        colorProvider: true,
+        foldingProvider: true
     };
     return { capabilities: capabilities };
 });
@@ -88,7 +89,7 @@ var schemaRequestService = function (uri) {
         return connection.sendRequest(VSCodeContentRequest.type, uri).then(function (responseText) {
             return responseText;
         }, function (error) {
-            return error.message;
+            return Promise.reject(error.message);
         });
     }
     if (uri.indexOf('//schema.management.azure.com/') !== -1) {
@@ -148,7 +149,7 @@ function updateConfiguration() {
     var languageSettings = {
         validate: true,
         allowComments: true,
-        schemas: []
+        schemas: new Array()
     };
     if (schemaAssociations) {
         for (var pattern in schemaAssociations) {
@@ -186,7 +187,7 @@ documents.onDidClose(function (event) {
     connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 var pendingValidationRequests = {};
-var validationDelayMs = 200;
+var validationDelayMs = 500;
 function cleanPendingValidation(textDocument) {
     var request = pendingValidationRequests[textDocument.uri];
     if (request) {
@@ -242,19 +243,19 @@ function getJSONDocument(document) {
     return jsonDocuments.get(document);
 }
 connection.onCompletion(function (textDocumentPosition) {
-    return errors_1.runSafe(function () {
+    return errors_1.runSafeAsync(function () {
         var document = documents.get(textDocumentPosition.textDocument.uri);
         var jsonDocument = getJSONDocument(document);
         return languageService.doComplete(document, textDocumentPosition.position, jsonDocument);
     }, null, "Error while computing completions for " + textDocumentPosition.textDocument.uri);
 });
 connection.onCompletionResolve(function (completionItem) {
-    return errors_1.runSafe(function () {
+    return errors_1.runSafeAsync(function () {
         return languageService.doResolve(completionItem);
-    }, null, "Error while resolving completion proposal");
+    }, completionItem, "Error while resolving completion proposal");
 });
 connection.onHover(function (textDocumentPositionParams) {
-    return errors_1.runSafe(function () {
+    return errors_1.runSafeAsync(function () {
         var document = documents.get(textDocumentPositionParams.textDocument.uri);
         var jsonDocument = getJSONDocument(document);
         return languageService.doHover(document, textDocumentPositionParams.position, jsonDocument);
@@ -274,13 +275,13 @@ connection.onDocumentRangeFormatting(function (formatParams) {
     }, [], "Error while formatting range for " + formatParams.textDocument.uri);
 });
 connection.onRequest(protocol_colorProvider_proposed_1.DocumentColorRequest.type, function (params) {
-    return errors_1.runSafe(function () {
+    return errors_1.runSafeAsync(function () {
         var document = documents.get(params.textDocument.uri);
         if (document) {
             var jsonDocument = getJSONDocument(document);
             return languageService.findDocumentColors(document, jsonDocument);
         }
-        return [];
+        return Promise.resolve([]);
     }, [], "Error while computing document colors for " + params.textDocument.uri);
 });
 connection.onRequest(protocol_colorProvider_proposed_1.ColorPresentationRequest.type, function (params) {
@@ -291,8 +292,84 @@ connection.onRequest(protocol_colorProvider_proposed_1.ColorPresentationRequest.
             return languageService.getColorPresentations(document, jsonDocument, params.color, params.range);
         }
         return [];
-    }, [], "Error while computing color presentationsd for " + params.textDocument.uri);
+    }, [], "Error while computing color presentations for " + params.textDocument.uri);
+});
+connection.onRequest(foldingProvider_proposed_1.FoldingRangesRequest.type, function (params) {
+    return errors_1.runSafe(function () {
+        var document = documents.get(params.textDocument.uri);
+        if (document) {
+            var ranges = [];
+            var stack = [];
+            var prevStart = -1;
+            var scanner = jsonc_parser_1.createScanner(document.getText(), false);
+            var token = scanner.scan();
+            while (token !== jsonc_parser_1.SyntaxKind.EOF) {
+                switch (token) {
+                    case jsonc_parser_1.SyntaxKind.OpenBraceToken:
+                    case jsonc_parser_1.SyntaxKind.OpenBracketToken: {
+                        var startLine = document.positionAt(scanner.getTokenOffset()).line;
+                        var range = { startLine: startLine, endLine: startLine, type: token === jsonc_parser_1.SyntaxKind.OpenBraceToken ? 'object' : 'array' };
+                        stack.push(range);
+                        break;
+                    }
+                    case jsonc_parser_1.SyntaxKind.CloseBraceToken:
+                    case jsonc_parser_1.SyntaxKind.CloseBracketToken: {
+                        var type = token === jsonc_parser_1.SyntaxKind.CloseBraceToken ? 'object' : 'array';
+                        if (stack.length > 0 && stack[stack.length - 1].type === type) {
+                            var range = stack.pop();
+                            var line = document.positionAt(scanner.getTokenOffset()).line;
+                            if (range && line > range.startLine + 1 && prevStart !== range.startLine) {
+                                range.endLine = line - 1;
+                                ranges.push(range);
+                                prevStart = range.startLine;
+                            }
+                        }
+                        break;
+                    }
+                    case jsonc_parser_1.SyntaxKind.BlockCommentTrivia: {
+                        var startLine = document.positionAt(scanner.getTokenOffset()).line;
+                        var endLine = document.positionAt(scanner.getTokenOffset() + scanner.getTokenLength()).line;
+                        if (startLine < endLine) {
+                            ranges.push({ startLine: startLine, endLine: endLine, type: foldingProvider_proposed_1.FoldingRangeType.Comment });
+                            prevStart = startLine;
+                        }
+                        break;
+                    }
+                    case jsonc_parser_1.SyntaxKind.LineCommentTrivia: {
+                        var text = document.getText().substr(scanner.getTokenOffset(), scanner.getTokenLength());
+                        var m = text.match(/^\/\/\s*#(region\b)|(endregion\b)/);
+                        if (m) {
+                            var line = document.positionAt(scanner.getTokenOffset()).line;
+                            if (m[1]) {
+                                var range = { startLine: line, endLine: line, type: foldingProvider_proposed_1.FoldingRangeType.Region };
+                                stack.push(range);
+                            }
+                            else {
+                                var i = stack.length - 1;
+                                while (i >= 0 && stack[i].type !== foldingProvider_proposed_1.FoldingRangeType.Region) {
+                                    i--;
+                                }
+                                if (i >= 0) {
+                                    var range = stack[i];
+                                    stack.length = i;
+                                    if (line > range.startLine && prevStart !== range.startLine) {
+                                        range.endLine = line;
+                                        ranges.push(range);
+                                        prevStart = range.startLine;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+                token = scanner.scan();
+            }
+            return { ranges: ranges };
+        }
+        return null;
+    }, null, "Error while computing folding ranges for " + params.textDocument.uri);
 });
 // Listen on the connection
 connection.listen();
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\json\server\out/jsonServerMain.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\json\server\out/jsonServerMain.js.map

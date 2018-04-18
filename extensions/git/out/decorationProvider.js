@@ -11,27 +11,32 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode_1 = require("vscode");
+const path = require("path");
 const repository_1 = require("./repository");
 const decorators_1 = require("./decorators");
 const util_1 = require("./util");
+const git_1 = require("./git");
 class GitIgnoreDecorationProvider {
-    constructor(repository) {
-        this.repository = repository;
-        this._onDidChangeDecorations = new vscode_1.EventEmitter();
-        this.onDidChangeDecorations = this._onDidChangeDecorations.event;
-        this.checkIgnoreQueue = new Map();
+    constructor(model) {
+        this.model = model;
+        this.queue = new Map();
         this.disposables = [];
-        this.disposables.push(vscode_1.window.registerDecorationProvider(this), util_1.filterEvent(vscode_1.workspace.onDidSaveTextDocument, e => e.fileName.endsWith('.gitignore'))(_ => this._onDidChangeDecorations.fire())
         //todo@joh -> events when the ignore status actually changes, not only when the file changes
-        );
-    }
-    dispose() {
-        this.disposables.forEach(d => d.dispose());
-        this.checkIgnoreQueue.clear();
+        this.onDidChangeDecorations = util_1.fireEvent(util_1.anyEvent(util_1.filterEvent(vscode_1.workspace.onDidSaveTextDocument, e => e.fileName.endsWith('.gitignore')), model.onDidOpenRepository, model.onDidCloseRepository));
+        this.disposables.push(vscode_1.window.registerDecorationProvider(this));
     }
     provideDecoration(uri) {
+        const repository = this.model.getRepository(uri);
+        if (!repository) {
+            return Promise.resolve(undefined);
+        }
+        let queueItem = this.queue.get(repository.root);
+        if (!queueItem) {
+            queueItem = { repository, queue: new Map() };
+            this.queue.set(repository.root, queueItem);
+        }
         return new Promise((resolve, reject) => {
-            this.checkIgnoreQueue.set(uri.fsPath, { resolve, reject });
+            queueItem.queue.set(uri.fsPath, { resolve, reject });
             this.checkIgnoreSoon();
         }).then(ignored => {
             if (ignored) {
@@ -43,18 +48,27 @@ class GitIgnoreDecorationProvider {
         });
     }
     checkIgnoreSoon() {
-        const queue = new Map(this.checkIgnoreQueue.entries());
-        this.checkIgnoreQueue.clear();
-        this.repository.checkIgnore([...queue.keys()]).then(ignoreSet => {
-            for (const [key, value] of queue.entries()) {
-                value.resolve(ignoreSet.has(key));
-            }
-        }, err => {
-            console.error(err);
-            for (const [, value] of queue.entries()) {
-                value.reject(err);
-            }
-        });
+        const queue = new Map(this.queue.entries());
+        this.queue.clear();
+        for (const [, item] of queue) {
+            const paths = [...item.queue.keys()];
+            item.repository.checkIgnore(paths).then(ignoreSet => {
+                for (const [key, value] of item.queue.entries()) {
+                    value.resolve(ignoreSet.has(key));
+                }
+            }, err => {
+                if (err.gitErrorCode !== git_1.GitErrorCodes.IsInSubmodule) {
+                    console.error(err);
+                }
+                for (const [, value] of item.queue.entries()) {
+                    value.reject(err);
+                }
+            });
+        }
+    }
+    dispose() {
+        this.disposables.forEach(d => d.dispose());
+        this.queue.clear();
     }
 }
 __decorate([
@@ -71,6 +85,7 @@ class GitDecorationProvider {
     }
     onDidRunGitStatus() {
         let newDecorations = new Map();
+        this.collectSubmoduleDecorationData(newDecorations);
         this.collectDecorationData(this.repository.indexGroup, newDecorations);
         this.collectDecorationData(this.repository.workingTreeGroup, newDecorations);
         this.collectDecorationData(this.repository.mergeGroup, newDecorations);
@@ -88,6 +103,11 @@ class GitDecorationProvider {
             }
         });
     }
+    collectSubmoduleDecorationData(bucket) {
+        for (const submodule of this.repository.submodules) {
+            bucket.set(vscode_1.Uri.file(path.join(this.repository.root, submodule.path)).toString(), GitDecorationProvider.SubmoduleDecorationData);
+        }
+    }
     provideDecoration(uri) {
         return this.decorations.get(uri.toString());
     }
@@ -95,12 +115,20 @@ class GitDecorationProvider {
         this.disposables.forEach(d => d.dispose());
     }
 }
+GitDecorationProvider.SubmoduleDecorationData = {
+    title: 'Submodule',
+    abbreviation: 'S',
+    color: new vscode_1.ThemeColor('gitDecoration.submoduleResourceForeground')
+};
 class GitDecorations {
     constructor(model) {
         this.model = model;
-        this.modelListener = [];
+        this.disposables = [];
+        this.modelDisposables = [];
         this.providers = new Map();
-        this.configListener = vscode_1.workspace.onDidChangeConfiguration(e => e.affectsConfiguration('git.decorations.enabled') && this.update());
+        this.disposables.push(new GitIgnoreDecorationProvider(model));
+        const onEnablementChange = util_1.filterEvent(vscode_1.workspace.onDidChangeConfiguration, e => e.affectsConfiguration('git.decorations.enabled'));
+        onEnablementChange(this.update, this, this.disposables);
         this.update();
     }
     update() {
@@ -113,20 +141,18 @@ class GitDecorations {
         }
     }
     enable() {
-        this.modelListener = [];
-        this.model.onDidOpenRepository(this.onDidOpenRepository, this, this.modelListener);
-        this.model.onDidCloseRepository(this.onDidCloseRepository, this, this.modelListener);
+        this.model.onDidOpenRepository(this.onDidOpenRepository, this, this.modelDisposables);
+        this.model.onDidCloseRepository(this.onDidCloseRepository, this, this.modelDisposables);
         this.model.repositories.forEach(this.onDidOpenRepository, this);
     }
     disable() {
-        this.modelListener.forEach(d => d.dispose());
+        this.modelDisposables = util_1.dispose(this.modelDisposables);
         this.providers.forEach(value => value.dispose());
         this.providers.clear();
     }
     onDidOpenRepository(repository) {
         const provider = new GitDecorationProvider(repository);
-        const ignoreProvider = new GitIgnoreDecorationProvider(repository);
-        this.providers.set(repository, vscode_1.Disposable.from(provider, ignoreProvider));
+        this.providers.set(repository, provider);
     }
     onDidCloseRepository(repository) {
         const provider = this.providers.get(repository);
@@ -136,11 +162,9 @@ class GitDecorations {
         }
     }
     dispose() {
-        this.configListener.dispose();
-        this.modelListener.forEach(d => d.dispose());
-        this.providers.forEach(value => value.dispose);
-        this.providers.clear();
+        this.disable();
+        this.disposables = util_1.dispose(this.disposables);
     }
 }
 exports.GitDecorations = GitDecorations;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\git\out/decorationProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\git\out/decorationProvider.js.map

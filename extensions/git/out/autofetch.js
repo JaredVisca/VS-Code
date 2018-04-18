@@ -48,16 +48,11 @@ class AutoFetcher {
                 return;
             }
             const yes = { title: localize(0, null) };
-            const readMore = { title: localize(1, null) };
-            const no = { isCloseAffordance: true, title: localize(2, null) };
-            const askLater = { title: localize(3, null) };
-            const result = yield vscode_1.window.showInformationMessage(localize(4, null), yes, readMore, no, askLater);
+            const no = { isCloseAffordance: true, title: localize(1, null) };
+            const askLater = { title: localize(2, null) };
+            const result = yield vscode_1.window.showInformationMessage(localize(3, null, 'https://go.microsoft.com/fwlink/?linkid=865294'), yes, no, askLater);
             if (result === askLater) {
                 return;
-            }
-            if (result === readMore) {
-                vscode_1.commands.executeCommand('vscode.open', vscode_1.Uri.parse('https://go.microsoft.com/fwlink/?linkid=865294'));
-                return this.onFirstGoodRemoteOperation();
             }
             if (result === yes) {
                 const gitConfig = vscode_1.workspace.getConfiguration('git');
@@ -117,4 +112,4 @@ class AutoFetcher {
 AutoFetcher.Period = 3 * 60 * 1000 /* three minutes */;
 AutoFetcher.DidInformUser = 'autofetch.didInformUser';
 exports.AutoFetcher = AutoFetcher;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\git\out/autofetch.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\git\out/autofetch.js.map

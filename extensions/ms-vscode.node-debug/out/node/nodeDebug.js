@@ -15,7 +15,7 @@ const URL = require("url");
 const Path = require("path");
 const FS = require("fs");
 const nls = require("vscode-nls");
-let localize = nls.config(process.env.VSCODE_NLS_CONFIG)(__filename);
+let localize = nls.loadMessageBundle(__filename);
 class Expander {
     constructor(func) {
         this._expanderFunction = func;
@@ -129,10 +129,18 @@ class Script {
     }
 }
 class InternalSourceBreakpoint {
-    constructor(line, column = 0, condition, hitter) {
+    constructor(line, column = 0, condition, logMessage, hitter) {
         this.line = this.orgLine = line;
         this.column = this.orgColumn = column;
-        this.condition = condition;
+        if (logMessage) {
+            this.condition = `console.log('${logMessage}')`;
+            if (condition) {
+                this.condition = `(${condition}) && ${this.condition}`;
+            }
+        }
+        else if (condition) {
+            this.condition = condition;
+        }
         this.hitCount = 0;
         this.hitter = hitter;
     }
@@ -158,7 +166,9 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
         this._mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
         this._compareContents = true; // by default verify that script contents is same as file contents
         this._supportsRunInTerminalRequest = false;
+        this._processId = -1; // pid of the program launched
         this._nodeProcessId = -1; // pid of the node runtime
+        this._isWSL = false;
         this._functionBreakpoints = new Array(); // node function breakpoint ids
         this._scripts = new Map(); // script cache
         this._files = new Map(); // file cache
@@ -561,9 +571,12 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
         else if (typeof args.externalConsole === 'boolean' && args.externalConsole) {
             this._console = 'externalTerminal';
         }
-        if (args.useWSL && !WSL.subsystemLinuxPresent()) {
-            this.sendErrorResponse(response, 2007, localize(15, null));
-            return;
+        if (args.useWSL) {
+            if (!WSL.subsystemLinuxPresent()) {
+                this.sendErrorResponse(response, 2007, localize(15, null));
+                return;
+            }
+            this._isWSL = true;
         }
         let runtimeExecutable = args.runtimeExecutable;
         if (args.useWSL) {
@@ -571,7 +584,7 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
         }
         else if (runtimeExecutable) {
             if (!Path.isAbsolute(runtimeExecutable)) {
-                const re = PathUtils.findOnPath(runtimeExecutable);
+                const re = PathUtils.findOnPath(runtimeExecutable, args.env);
                 if (!re) {
                     this.sendErrorResponse(response, 2001, localize(16, null, '{_runtime}'), { _runtime: runtimeExecutable });
                     return;
@@ -579,7 +592,7 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
                 runtimeExecutable = re;
             }
             else {
-                const re = PathUtils.findExecutable(runtimeExecutable);
+                const re = PathUtils.findExecutable(runtimeExecutable, args.env);
                 if (!re) {
                     this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
                     return;
@@ -588,7 +601,7 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
             }
         }
         else {
-            const re = PathUtils.findOnPath(NodeDebugSession.NODE);
+            const re = PathUtils.findOnPath(NodeDebugSession.NODE, args.env);
             if (!re) {
                 this.sendErrorResponse(response, 2001, localize(17, null, '{_runtime}'), { _runtime: NodeDebugSession.NODE });
                 return;
@@ -757,6 +770,9 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
                         && !args.useWSL; // it will not work with WSL either
                     if (this._noDebug) {
                         this.sendResponse(response);
+                        // since we do not know the process ID we will not be able to terminate it properly
+                        // therefore we end the session
+                        this._terminated('cannot track process');
                     }
                     else {
                         this._attach(response, args, port, address, timeout);
@@ -793,7 +809,7 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
             nodeProcess.on('close', (code) => {
                 this._terminated('target closed');
             });
-            this._nodeProcessId = nodeProcess.pid;
+            this._processId = nodeProcess.pid;
             this._captureOutput(nodeProcess);
             if (this._noDebug) {
                 this.sendResponse(response);
@@ -938,12 +954,8 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
                             const v = this._node.embeddedHostVersion; // x.y.z version represented as (x*100+y)*100+z
                             if (!this._node.v8Version && v >= 70000) {
                                 this._stepBack = true;
+                                this.sendEvent(new vscode_debugadapter_1.CapabilitiesEvent({ supportsStepBack: true }));
                             }
-                        }
-                        if (this._stepBack) {
-                            response.body = {
-                                supportsStepBack: true
-                            };
                         }
                         this.sendResponse(response);
                         this._startInitialize(!running);
@@ -1145,7 +1157,9 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
         // so we use the stopped state of the VM
         if (this._attachMode) {
             this.log('la', `_startInitialize2: in attach mode we guess stopOnEntry flag to be '${stopped}''`);
-            this._stopOnEntry = stopped;
+            if (this._stopOnEntry === undefined) {
+                this._stopOnEntry = stopped;
+            }
         }
         if (this._stopOnEntry) {
             // user has requested 'stop on entry' so send out a stop-on-entry event
@@ -1186,12 +1200,35 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
             else {
                 // stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
                 this._node.stop();
-                // kill the whole process tree by starting with the node process
-                let pid = this._nodeProcessId;
-                if (pid > 0) {
-                    this._nodeProcessId = -1;
-                    this.log('la', 'shutdown: kill debugee and sub-processes');
-                    NodeDebugSession.killTree(pid);
+                this.log('la', 'shutdown: kill debugee and sub-processes');
+                let pid = this._processId;
+                this._processId = -1;
+                if (this._isWSL) {
+                    // kill the whole process tree by starting with the launched runtimeExecutable
+                    if (pid > 0) {
+                        NodeDebugSession.killTree(pid);
+                    }
+                    // under WSL killing the "bash" shell on the Windows side does not automatically kill node.js on the linux side
+                    // so let's kill the node.js process on the linux side explicitly
+                    const node_pid = this._nodeProcessId;
+                    if (node_pid > 0) {
+                        this._nodeProcessId = -1;
+                        try {
+                            WSL.spawnSync(true, '/bin/kill', ['-9', node_pid.toString()]);
+                        }
+                        catch (err) {
+                        }
+                    }
+                }
+                else {
+                    // backward compatibilty
+                    if (this._nodeProcessId > 0) {
+                        pid = this._nodeProcessId;
+                        this._nodeProcessId = -1;
+                    }
+                    if (pid > 0) {
+                        NodeDebugSession.killTree(pid);
+                    }
                 }
             }
             super.shutdown();
@@ -1222,7 +1259,7 @@ class NodeDebugSession extends vscode_debugadapter_1.LoggingDebugSession {
                         // error
                     }
                 }
-                sbs.push(new InternalSourceBreakpoint(this.convertClientLineToDebugger(b.line), typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0, b.condition, hitter));
+                sbs.push(new InternalSourceBreakpoint(this.convertClientLineToDebugger(b.line), typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0, b.condition, b.logMessage, hitter));
             }
         }
         else if (args.lines) {

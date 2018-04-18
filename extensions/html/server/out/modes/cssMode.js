@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var languageModelCache_1 = require("../languageModelCache");
 var vscode_css_languageservice_1 = require("vscode-css-languageservice");
 var embeddedSupport_1 = require("./embeddedSupport");
+var vscode_emmet_helper_1 = require("vscode-emmet-helper");
 function getCSSMode(documentRegions) {
     var cssLanguageService = vscode_css_languageservice_1.getCSSLanguageService();
     var embeddedCSSDocuments = languageModelCache_1.getLanguageModelCache(10, 60, function (document) { return documentRegions.get(document).getEmbeddedDocument('css'); });
@@ -22,9 +23,30 @@ function getCSSMode(documentRegions) {
             var embedded = embeddedCSSDocuments.get(document);
             return cssLanguageService.doValidation(embedded, cssStylesheets.get(embedded), settings && settings.css);
         },
-        doComplete: function (document, position) {
+        doComplete: function (document, position, settings, registeredCompletionParticipants) {
             var embedded = embeddedCSSDocuments.get(document);
-            return cssLanguageService.doComplete(embedded, position, cssStylesheets.get(embedded));
+            var stylesheet = cssStylesheets.get(embedded);
+            if (registeredCompletionParticipants) {
+                var nonEmmetCompletionParticipants = [];
+                // Css Emmet completions in html files are provided no matter where the cursor is inside the embedded css document
+                // Mimic the same here, until we solve the issue of css language service not able to parse complete embedded documents when there are errors
+                for (var i = 0; i < registeredCompletionParticipants.length; i++) {
+                    if (typeof registeredCompletionParticipants[i].getId === 'function' && registeredCompletionParticipants[i].getId() === 'emmet') {
+                        var extractedResults = vscode_emmet_helper_1.extractAbbreviation(document, position, { lookAhead: false, syntax: 'css' });
+                        if (extractedResults && extractedResults.abbreviation) {
+                            registeredCompletionParticipants[i].onCssProperty({ propertyName: extractedResults.abbreviation, range: extractedResults.abbreviationRange });
+                        }
+                    }
+                    else {
+                        nonEmmetCompletionParticipants.push(registeredCompletionParticipants[i]);
+                    }
+                }
+                cssLanguageService.setCompletionParticipants(nonEmmetCompletionParticipants);
+            }
+            return cssLanguageService.doComplete(embedded, position, stylesheet);
+        },
+        setCompletionParticipants: function (registeredCompletionParticipants) {
+            cssLanguageService.setCompletionParticipants(registeredCompletionParticipants);
         },
         doHover: function (document, position) {
             var embedded = embeddedCSSDocuments.get(document);
@@ -65,4 +87,4 @@ function getCSSMode(documentRegions) {
     };
 }
 exports.getCSSMode = getCSSMode;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\html\server\out/modes\cssMode.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\html\server\out/modes\cssMode.js.map

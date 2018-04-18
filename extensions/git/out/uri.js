@@ -11,15 +11,26 @@ exports.fromGitUri = fromGitUri;
 // As a mitigation for extensions like ESLint showing warnings and errors
 // for git URIs, let's change the file extension of these uris to .git,
 // when `replaceFileExtension` is true.
-function toGitUri(uri, ref, replaceFileExtension = false) {
+function toGitUri(uri, ref, options = {}) {
+    const params = {
+        path: uri.fsPath,
+        ref
+    };
+    if (options.submoduleOf) {
+        params.submoduleOf = options.submoduleOf;
+    }
+    let path = uri.path;
+    if (options.replaceFileExtension) {
+        path = `${path}.git`;
+    }
+    else if (options.submoduleOf) {
+        path = `${path}.diff`;
+    }
     return uri.with({
         scheme: 'git',
-        path: replaceFileExtension ? `${uri.path}.git` : uri.path,
-        query: JSON.stringify({
-            path: uri.fsPath,
-            ref
-        })
+        path,
+        query: JSON.stringify(params)
     });
 }
 exports.toGitUri = toGitUri;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\git\out/uri.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\git\out/uri.js.map

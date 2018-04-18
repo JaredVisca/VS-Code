@@ -3,10 +3,11 @@
  *--------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+const nls = require("vscode-nls");
 const vscode = require("vscode");
 const vscode_1 = require("vscode");
-const utilities_1 = require("./utilities");
 const path_1 = require("path");
+const localize = nls.loadMessageBundle(__filename);
 //---- loaded script explorer
 const URL_REGEXP = /^(https?:\/\/[^/]+)(\/.*)$/;
 class Source {
@@ -204,14 +205,14 @@ function pickLoadedScript() {
     const session = vscode.debug.activeDebugSession;
     return listLoadedScripts(session).then(sources => {
         let options = {
-            placeHolder: utilities_1.localize('select.script', "Select a script"),
+            placeHolder: localize(0, null),
             matchOnDescription: true,
             matchOnDetail: true,
             ignoreFocusOut: true
         };
         let items;
         if (sources === undefined) {
-            items = [{ label: utilities_1.localize('no.loaded.scripts', "No loaded scripts available"), description: '' }];
+            items = [{ label: localize(1, null), description: '' }];
         }
         else {
             items = sources.map(source => new LoadedScriptItem(source)).sort((a, b) => a.label.localeCompare(b.label));

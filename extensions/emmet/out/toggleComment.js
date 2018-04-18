@@ -29,12 +29,28 @@ function toggleComment() {
         return;
     }
     return editor.edit(editBuilder => {
+        let allEdits = [];
         editor.selections.reverse().forEach(selection => {
             let edits = toggleCommentInternal(editor.document, selection, rootNode);
-            edits.forEach(x => {
-                editBuilder.replace(x.range, x.newText);
-            });
+            if (edits.length > 0) {
+                allEdits.push(edits);
+            }
         });
+        // Apply edits in order so we can skip nested ones.
+        allEdits.sort((arr1, arr2) => {
+            let result = arr1[0].range.start.line - arr2[0].range.start.line;
+            return result === 0 ? arr1[0].range.start.character - arr2[0].range.start.character : result;
+        });
+        let lastEditPosition = new vscode.Position(0, 0);
+        for (let i = 0; i < allEdits.length; i++) {
+            const edits = allEdits[i];
+            if (edits[0].range.end.isAfterOrEqual(lastEditPosition)) {
+                edits.forEach(x => {
+                    editBuilder.replace(x.range, x.newText);
+                    lastEditPosition = x.range.end;
+                });
+            }
+        }
     });
 }
 exports.toggleComment = toggleComment;
@@ -165,4 +181,4 @@ function adjustEndNodeCss(node, pos, rootNode) {
     }
     return newEndNode.end;
 }
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/toggleComment.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/toggleComment.js.map

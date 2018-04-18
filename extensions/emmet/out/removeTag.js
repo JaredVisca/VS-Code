@@ -56,4 +56,4 @@ function getRangeToRemove(editor, rootNode, selection, indentInSpaces) {
     }
     return ranges;
 }
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/removeTag.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/removeTag.js.map

@@ -38,4 +38,4 @@ exports.default = ManagedFileContextManager;
 function isSupportedLanguageMode(doc) {
     return vscode.languages.match([languageModeIds.typescript, languageModeIds.typescriptreact, languageModeIds.javascript, languageModeIds.javascriptreact], doc) > 0;
 }
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\managedFileContext.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\managedFileContext.js.map

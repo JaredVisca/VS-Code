@@ -4,7 +4,7 @@
  *--------------------------------------------------------*/
 Object.defineProperty(exports, "__esModule", { value: true });
 const nls = require("vscode-nls");
-const localize = nls.config(process.env.VSCODE_NLS_CONFIG)(__filename);
+const localize = nls.loadMessageBundle(__filename);
 function runtimeNotFound(_runtime) {
     return {
         id: 2001,

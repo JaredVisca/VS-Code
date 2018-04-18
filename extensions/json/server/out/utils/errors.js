@@ -18,16 +18,17 @@ function formatError(message, err) {
     return message;
 }
 exports.formatError = formatError;
+function runSafeAsync(func, errorVal, errorMessage) {
+    var t = func();
+    return t.then(void 0, function (e) {
+        console.error(formatError(errorMessage, e));
+        return errorVal;
+    });
+}
+exports.runSafeAsync = runSafeAsync;
 function runSafe(func, errorVal, errorMessage) {
     try {
-        var t = func();
-        if (t instanceof Promise) {
-            return t.then(void 0, function (e) {
-                console.error(formatError(errorMessage, e));
-                return errorVal;
-            });
-        }
-        return t;
+        return func();
     }
     catch (e) {
         console.error(formatError(errorMessage, e));
@@ -35,4 +36,4 @@ function runSafe(func, errorVal, errorMessage) {
     }
 }
 exports.runSafe = runSafe;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\json\server\out/utils\errors.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\json\server\out/utils\errors.js.map

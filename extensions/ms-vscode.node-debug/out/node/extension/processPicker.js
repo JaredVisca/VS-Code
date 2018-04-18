@@ -3,14 +3,15 @@
  *--------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+const nls = require("vscode-nls");
 const vscode = require("vscode");
 const child_process_1 = require("child_process");
 const path_1 = require("path");
-const utilities_1 = require("./utilities");
+const localize = nls.loadMessageBundle(__filename);
 function pickProcess() {
     return listProcesses().then(items => {
         let options = {
-            placeHolder: utilities_1.localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
+            placeHolder: localize(0, null),
             matchOnDescription: true,
             matchOnDetail: true,
             ignoreFocusOut: true

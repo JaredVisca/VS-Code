@@ -43,7 +43,7 @@ class GitContentProvider {
         if (uri.scheme !== 'file') {
             return;
         }
-        this._onDidChange.fire(uri_1.toGitUri(uri, '', true));
+        this._onDidChange.fire(uri_1.toGitUri(uri, '', { replaceFileExtension: true }));
     }
     eventuallyFireChangeEvents() {
         this.fireChangeEvents();
@@ -69,6 +69,14 @@ class GitContentProvider {
     }
     provideTextDocumentContent(uri) {
         return __awaiter(this, void 0, void 0, function* () {
+            let { path, ref, submoduleOf } = uri_1.fromGitUri(uri);
+            if (submoduleOf) {
+                const repository = this.model.getRepository(submoduleOf);
+                if (!repository) {
+                    return '';
+                }
+                return yield repository.diff(path, { cached: ref === 'index' });
+            }
             const repository = this.model.getRepository(uri);
             if (!repository) {
                 return '';
@@ -77,7 +85,6 @@ class GitContentProvider {
             const timestamp = new Date().getTime();
             const cacheValue = { uri, timestamp };
             this.cache[cacheKey] = cacheValue;
-            let { path, ref } = uri_1.fromGitUri(uri);
             if (ref === '~') {
                 const fileUri = vscode_1.Uri.file(path);
                 const uriString = fileUri.toString();
@@ -118,4 +125,4 @@ __decorate([
     decorators_1.throttle
 ], GitContentProvider.prototype, "fireChangeEvents", null);
 exports.GitContentProvider = GitContentProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\git\out/contentProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\git\out/contentProvider.js.map

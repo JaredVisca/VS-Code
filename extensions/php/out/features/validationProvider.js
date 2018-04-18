@@ -76,6 +76,7 @@ var CheckedExecutablePath = 'php.validate.checkedExecutablePath';
 var PHPValidationProvider = /** @class */ (function () {
     function PHPValidationProvider(workspaceStore) {
         this.workspaceStore = workspaceStore;
+        this.documentListener = null;
         this.executable = undefined;
         this.validationEnabled = true;
         this.trigger = RunTrigger.onSave;
@@ -95,8 +96,10 @@ var PHPValidationProvider = /** @class */ (function () {
         subscriptions.push(vscode.commands.registerCommand('php.untrustValidationExecutable', this.untrustValidationExecutable, this));
     };
     PHPValidationProvider.prototype.dispose = function () {
-        this.diagnosticCollection.clear();
-        this.diagnosticCollection.dispose();
+        if (this.diagnosticCollection) {
+            this.diagnosticCollection.clear();
+            this.diagnosticCollection.dispose();
+        }
         if (this.documentListener) {
             this.documentListener.dispose();
             this.documentListener = null;
@@ -275,4 +278,4 @@ var PHPValidationProvider = /** @class */ (function () {
     return PHPValidationProvider;
 }());
 exports.default = PHPValidationProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\php\out/features\validationProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\php\out/features\validationProvider.js.map

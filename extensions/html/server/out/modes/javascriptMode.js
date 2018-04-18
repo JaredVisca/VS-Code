@@ -77,7 +77,7 @@ function getJavascriptMode(documentRegions) {
         doComplete: function (document, position) {
             updateCurrentTextDocument(document);
             var offset = currentTextDocument.offsetAt(position);
-            var completions = jsLanguageService.getCompletionsAtPosition(FILE_NAME, offset, { includeExternalModuleExports: false });
+            var completions = jsLanguageService.getCompletionsAtPosition(FILE_NAME, offset, { includeExternalModuleExports: false, includeInsertTextCompletions: false });
             if (!completions) {
                 return { isIncomplete: false, items: [] };
             }
@@ -393,4 +393,4 @@ function generateIndent(level, options) {
         return strings_1.repeat('\t', level);
     }
 }
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\html\server\out/modes\javascriptMode.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\html\server\out/modes\javascriptMode.js.map

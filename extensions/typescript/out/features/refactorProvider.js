@@ -68,12 +68,11 @@ class TypeScriptRefactorProvider {
         const doRefactoringCommand = commandManager.register(new ApplyRefactoringCommand(this.client, formattingOptionsManager));
         commandManager.register(new SelectRefactorCommand(doRefactoringCommand));
     }
-    async provideCodeActions() {
-        // Uses provideCodeActions2 instead
-        return [];
-    }
-    async provideCodeActions2(document, _range, _context, token) {
+    async provideCodeActions(document, _range, context, token) {
         if (!this.client.apiVersion.has240Features()) {
+            return [];
+        }
+        if (context.only && !vscode.CodeActionKind.Refactor.contains(context.only)) {
             return [];
         }
         if (!vscode.window.activeTextEditor) {
@@ -97,25 +96,23 @@ class TypeScriptRefactorProvider {
             const actions = [];
             for (const info of response.body) {
                 if (info.inlineable === false) {
-                    actions.push({
+                    const codeAction = new vscode.CodeAction(info.description, vscode.CodeActionKind.Refactor);
+                    codeAction.command = {
                         title: info.description,
-                        command: {
-                            title: info.description,
-                            command: SelectRefactorCommand.ID,
-                            arguments: [document, file, info, range]
-                        }
-                    });
+                        command: SelectRefactorCommand.ID,
+                        arguments: [document, file, info, range]
+                    };
+                    actions.push(codeAction);
                 }
                 else {
                     for (const action of info.actions) {
-                        actions.push({
+                        const codeAction = new vscode.CodeAction(action.description, TypeScriptRefactorProvider.getKind(action));
+                        codeAction.command = {
                             title: action.description,
-                            command: {
-                                title: action.description,
-                                command: ApplyRefactoringCommand.ID,
-                                arguments: [document, file, info.name, action.name, range]
-                            }
-                        });
+                            command: ApplyRefactoringCommand.ID,
+                            arguments: [document, file, info.name, action.name, range]
+                        };
+                        actions.push(codeAction);
                     }
                 }
             }
@@ -125,6 +122,17 @@ class TypeScriptRefactorProvider {
             return [];
         }
     }
+    static getKind(refactor) {
+        if (refactor.name.startsWith('function_')) {
+            return TypeScriptRefactorProvider.extractFunctionKind;
+        }
+        else if (refactor.name.startsWith('constant_')) {
+            return TypeScriptRefactorProvider.extractConstantKind;
+        }
+        return vscode.CodeActionKind.Refactor;
+    }
 }
+TypeScriptRefactorProvider.extractFunctionKind = vscode.CodeActionKind.RefactorExtract.append('function');
+TypeScriptRefactorProvider.extractConstantKind = vscode.CodeActionKind.RefactorExtract.append('constant');
 exports.default = TypeScriptRefactorProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/features\refactorProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/features\refactorProvider.js.map

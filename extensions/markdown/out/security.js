@@ -1,11 +1,10 @@
+"use strict";
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-const previewContentProvider_1 = require("./features/previewContentProvider");
 const nls = require("vscode-nls");
 const localize = nls.loadMessageBundle(__filename);
 var MarkdownPreviewSecurityLevel;
@@ -62,9 +61,9 @@ class ExtensionContentSecurityPolicyArbiter {
 }
 exports.ExtensionContentSecurityPolicyArbiter = ExtensionContentSecurityPolicyArbiter;
 class PreviewSecuritySelector {
-    constructor(cspArbiter, contentProvider) {
+    constructor(cspArbiter, webviewManager) {
         this.cspArbiter = cspArbiter;
-        this.contentProvider = contentProvider;
+        this.webviewManager = webviewManager;
     }
     async showSecutitySelectorForResource(resource) {
         function markActiveWhen(when) {
@@ -105,19 +104,15 @@ class PreviewSecuritySelector {
             vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://go.microsoft.com/fwlink/?linkid=854414'));
             return;
         }
-        const sourceUri = previewContentProvider_1.getMarkdownUri(resource);
         if (selection.type === 'toggle') {
             this.cspArbiter.setShouldDisableSecurityWarning(!this.cspArbiter.shouldDisableSecurityWarnings());
-            this.contentProvider.update(sourceUri);
             return;
         }
-        await this.cspArbiter.setSecurityLevelForResource(resource, selection.type);
-        await vscode.commands.executeCommand('_workbench.htmlPreview.updateOptions', sourceUri, {
-            allowScripts: true,
-            allowSvgs: this.cspArbiter.shouldAllowSvgsForResource(resource)
-        });
-        this.contentProvider.update(sourceUri);
+        else {
+            await this.cspArbiter.setSecurityLevelForResource(resource, selection.type);
+        }
+        this.webviewManager.refresh();
     }
 }
 exports.PreviewSecuritySelector = PreviewSecuritySelector;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\markdown\out/security.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\markdown\out/security.js.map

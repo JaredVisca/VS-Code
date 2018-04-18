@@ -4,11 +4,24 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-const nls = require("vscode-nls");
-exports.localize = nls.config(process.env.VSCODE_NLS_CONFIG)(__filename);
-function log(message) {
+/**
+ * Send to debug console.
+ */
+function writeToConsole(message) {
     vscode.debug.activeDebugConsole.appendLine(message);
 }
-exports.log = log;
+exports.writeToConsole = writeToConsole;
+/**
+ * Copy attributes from fromObject to toObject.
+ */
+function extendObject(toObject, fromObject) {
+    for (let key in fromObject) {
+        if (fromObject.hasOwnProperty(key)) {
+            toObject[key] = fromObject[key];
+        }
+    }
+    return toObject;
+}
+exports.extendObject = extendObject;
 
 //# sourceMappingURL=../../../out/node/extension/utilities.js.map

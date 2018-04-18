@@ -6,6 +6,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode_1 = require("vscode");
 const convert_1 = require("../utils/convert");
+const regexp_1 = require("../utils/regexp");
 class ReferencesCodeLens extends vscode_1.CodeLens {
     constructor(document, file, range) {
         super(range);
@@ -14,9 +15,32 @@ class ReferencesCodeLens extends vscode_1.CodeLens {
     }
 }
 exports.ReferencesCodeLens = ReferencesCodeLens;
+class CachedNavTreeResponse {
+    constructor() {
+        this.version = -1;
+        this.document = '';
+    }
+    execute(document, f) {
+        if (this.matches(document)) {
+            return this.response;
+        }
+        return this.update(document, f());
+    }
+    matches(document) {
+        return this.version === document.version && this.document === document.uri.toString();
+    }
+    update(document, response) {
+        this.response = response;
+        this.version = document.version;
+        this.document = document.uri.toString();
+        return response;
+    }
+}
+exports.CachedNavTreeResponse = CachedNavTreeResponse;
 class TypeScriptBaseCodeLensProvider {
-    constructor(client) {
+    constructor(client, cachedResponse) {
         this.client = client;
+        this.cachedResponse = cachedResponse;
         this.enabled = true;
         this.onDidChangeCodeLensesEmitter = new vscode_1.EventEmitter();
     }
@@ -38,7 +62,7 @@ class TypeScriptBaseCodeLensProvider {
             return [];
         }
         try {
-            const response = await this.client.execute('navtree', { file: filepath }, token);
+            const response = await this.cachedResponse.execute(document, () => this.client.execute('navtree', { file: filepath }, token));
             if (!response) {
                 return [];
             }
@@ -77,7 +101,7 @@ class TypeScriptBaseCodeLensProvider {
         }
         const range = convert_1.tsTextSpanToVsRange(span);
         const text = document.getText(range);
-        const identifierMatch = new RegExp(`^(.*?(\\b|\\W))${(item.text || '').replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}(\\b|\\W)`, 'gm');
+        const identifierMatch = new RegExp(`^(.*?(\\b|\\W))${regexp_1.escapeRegExp(item.text || '')}(\\b|\\W)`, 'gm');
         const match = identifierMatch.exec(text);
         const prefixLength = match ? match.index + match[1].length : 0;
         const startOffset = document.offsetAt(new vscode_1.Position(range.start.line, range.start.character)) + prefixLength;
@@ -85,4 +109,4 @@ class TypeScriptBaseCodeLensProvider {
     }
 }
 exports.TypeScriptBaseCodeLensProvider = TypeScriptBaseCodeLensProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/features\baseCodeLensProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/features\baseCodeLensProvider.js.map

@@ -47,12 +47,12 @@ var protocol_colorProvider_proposed_1 = require("vscode-languageserver-protocol/
 var protocol_workspaceFolders_proposed_1 = require("vscode-languageserver-protocol/lib/protocol.workspaceFolders.proposed");
 var formatting_1 = require("./modes/formatting");
 var arrays_1 = require("./utils/arrays");
-var strings_1 = require("./utils/strings");
-var url = require("url");
-var path = require("path");
+var documentContext_1 = require("./utils/documentContext");
 var vscode_uri_1 = require("vscode-uri");
-var nls = require("vscode-nls");
-nls.config(process.env['VSCODE_NLS_CONFIG']);
+var errors_1 = require("./utils/errors");
+var vscode_emmet_helper_1 = require("vscode-emmet-helper");
+var pathCompletion_1 = require("./modes/pathCompletion");
+var foldingProvider_proposed_1 = require("./protocol/foldingProvider.proposed");
 var TagCloseRequest;
 (function (TagCloseRequest) {
     TagCloseRequest.type = new vscode_languageserver_1.RequestType('html/tag');
@@ -61,13 +61,18 @@ var TagCloseRequest;
 var connection = vscode_languageserver_1.createConnection();
 console.log = connection.console.log.bind(connection.console);
 console.error = connection.console.error.bind(connection.console);
+process.on('unhandledRejection', function (e) {
+    connection.console.error(errors_1.formatError("Unhandled exception", e));
+});
+process.on('uncaughtException', function (e) {
+    connection.console.error(errors_1.formatError("Unhandled exception", e));
+});
 // Create a simple text document manager. The text document manager
 // supports full document sync only
 var documents = new vscode_languageserver_1.TextDocuments();
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
-var workspacePath;
 var workspaceFolders;
 var languageModes;
 var clientSnippetSupport = false;
@@ -93,12 +98,20 @@ function getDocumentSettings(textDocument, needsDocumentSettings) {
     }
     return Promise.resolve(void 0);
 }
+var emmetSettings = {};
+var currentEmmetExtensionsPath;
+var emmetTriggerCharacters = ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 // After the server has started the client sends an initilize request. The server receives
 // in the passed params the rootPath of the workspace plus the client capabilites
 connection.onInitialize(function (params) {
     var initializationOptions = params.initializationOptions;
-    workspacePath = params.rootPath;
     workspaceFolders = params.workspaceFolders;
+    if (!Array.isArray(workspaceFolders)) {
+        workspaceFolders = [];
+        if (params.rootPath) {
+            workspaceFolders.push({ name: '', uri: vscode_uri_1.default.file(params.rootPath).toString() });
+        }
+    }
     languageModes = languageModes_1.getLanguageModes(initializationOptions ? initializationOptions.embeddedLanguages : { css: true, javascript: true });
     documents.onDidClose(function (e) {
         languageModes.onDocumentRemoved(e.document);
@@ -124,7 +137,7 @@ connection.onInitialize(function (params) {
     var capabilities = {
         // Tell the client that the server works in FULL text document sync mode
         textDocumentSync: documents.syncKind,
-        completionProvider: clientSnippetSupport ? { resolveProvider: true, triggerCharacters: ['.', ':', '<', '"', '=', '/'] } : undefined,
+        completionProvider: clientSnippetSupport ? { resolveProvider: true, triggerCharacters: emmetTriggerCharacters.concat(['.', ':', '<', '"', '=', '/']) } : undefined,
         hoverProvider: true,
         documentHighlightProvider: true,
         documentRangeFormattingProvider: false,
@@ -133,7 +146,8 @@ connection.onInitialize(function (params) {
         definitionProvider: true,
         signatureHelpProvider: { triggerCharacters: ['('] },
         referencesProvider: true,
-        colorProvider: true
+        colorProvider: true,
+        foldingProvider: true
     };
     return { capabilities: capabilities };
 });
@@ -184,9 +198,15 @@ connection.onDidChangeConfiguration(function (change) {
             formatterRegistration = null;
         }
     }
+    emmetSettings = globalSettings.emmet;
+    if (currentEmmetExtensionsPath !== emmetSettings['extensionsPath']) {
+        currentEmmetExtensionsPath = emmetSettings['extensionsPath'];
+        var workspaceUri = (workspaceFolders && workspaceFolders.length === 1) ? vscode_uri_1.default.parse(workspaceFolders[0].uri) : null;
+        vscode_emmet_helper_1.updateExtensionsPath(currentEmmetExtensionsPath, workspaceUri ? workspaceUri.fsPath : null);
+    }
 });
 var pendingValidationRequests = {};
-var validationDelayMs = 200;
+var validationDelayMs = 500;
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(function (change) {
@@ -221,11 +241,12 @@ function isValidationEnabled(languageId, settings) {
 }
 function validateTextDocument(textDocument) {
     return __awaiter(this, void 0, void 0, function () {
-        var diagnostics, modes_1, settings_1;
+        var diagnostics_1, modes_1, settings_1, e_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    diagnostics = [];
+                    _a.trys.push([0, 3, , 4]);
+                    diagnostics_1 = [];
                     if (!(textDocument.languageId === 'html')) return [3 /*break*/, 2];
                     modes_1 = languageModes.getAllModesInDocument(textDocument);
                     return [4 /*yield*/, getDocumentSettings(textDocument, function () { return modes_1.some(function (m) { return !!m.doValidation; }); })];
@@ -233,191 +254,257 @@ function validateTextDocument(textDocument) {
                     settings_1 = _a.sent();
                     modes_1.forEach(function (mode) {
                         if (mode.doValidation && isValidationEnabled(mode.getId(), settings_1)) {
-                            arrays_1.pushAll(diagnostics, mode.doValidation(textDocument, settings_1));
+                            arrays_1.pushAll(diagnostics_1, mode.doValidation(textDocument, settings_1));
                         }
                     });
                     _a.label = 2;
                 case 2:
-                    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: diagnostics });
-                    return [2 /*return*/];
+                    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: diagnostics_1 });
+                    return [3 /*break*/, 4];
+                case 3:
+                    e_1 = _a.sent();
+                    connection.console.error(errors_1.formatError("Error while validating " + textDocument.uri, e_1));
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
             }
         });
     });
 }
+var cachedCompletionList;
+var hexColorRegex = /^#[\d,a-f,A-F]{1,6}$/;
 connection.onCompletion(function (textDocumentPosition) { return __awaiter(_this, void 0, void 0, function () {
-    var document, mode, doComplete_1, settings;
+    var _this = this;
     return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                document = documents.get(textDocumentPosition.textDocument.uri);
-                mode = languageModes.getModeAtPosition(document, textDocumentPosition.position);
-                if (!(mode && mode.doComplete)) return [3 /*break*/, 2];
-                doComplete_1 = mode.doComplete;
-                if (mode.getId() !== 'html') {
-                    connection.telemetry.logEvent({ key: 'html.embbedded.complete', value: { languageId: mode.getId() } });
-                }
-                return [4 /*yield*/, getDocumentSettings(document, function () { return doComplete_1.length > 2; })];
-            case 1:
-                settings = _a.sent();
-                return [2 /*return*/, doComplete_1(document, textDocumentPosition.position, settings)];
-            case 2: return [2 /*return*/, { isIncomplete: true, items: [] }];
-        }
+        return [2 /*return*/, errors_1.runSafe(function () { return __awaiter(_this, void 0, void 0, function () {
+                var document, mode, result_1, emmetCompletionList, pathCompletionList, emmetCompletionParticipant, completionParticipants, pathCompletionParticipant, settings, result, _a;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            document = documents.get(textDocumentPosition.textDocument.uri);
+                            mode = languageModes.getModeAtPosition(document, textDocumentPosition.position);
+                            if (!mode || !mode.doComplete) {
+                                return [2 /*return*/, { isIncomplete: true, items: [] }];
+                            }
+                            if (cachedCompletionList
+                                && !cachedCompletionList.isIncomplete
+                                && (mode.getId() === 'html' || mode.getId() === 'css')
+                                && textDocumentPosition.context
+                                && textDocumentPosition.context.triggerKind === vscode_languageserver_1.CompletionTriggerKind.TriggerForIncompleteCompletions) {
+                                result_1 = vscode_emmet_helper_1.doComplete(document, textDocumentPosition.position, mode.getId(), emmetSettings);
+                                if (result_1 && result_1.items) {
+                                    (_a = result_1.items).push.apply(_a, cachedCompletionList.items);
+                                }
+                                else {
+                                    result_1 = cachedCompletionList;
+                                    cachedCompletionList = null;
+                                }
+                                return [2 /*return*/, result_1];
+                            }
+                            if (mode.getId() !== 'html') {
+                                connection.telemetry.logEvent({ key: 'html.embbedded.complete', value: { languageId: mode.getId() } });
+                            }
+                            cachedCompletionList = null;
+                            emmetCompletionList = {
+                                isIncomplete: false,
+                                items: []
+                            };
+                            pathCompletionList = {
+                                isIncomplete: false,
+                                items: []
+                            };
+                            emmetCompletionParticipant = vscode_emmet_helper_1.getEmmetCompletionParticipants(document, textDocumentPosition.position, mode.getId(), emmetSettings, emmetCompletionList);
+                            completionParticipants = [emmetCompletionParticipant];
+                            // Ideally, fix this in the Language Service side
+                            // Check participants' methods before calling them
+                            if (mode.getId() === 'html') {
+                                pathCompletionParticipant = pathCompletion_1.getPathCompletionParticipant(document, workspaceFolders, pathCompletionList);
+                                completionParticipants.push(pathCompletionParticipant);
+                            }
+                            return [4 /*yield*/, getDocumentSettings(document, function () { return mode.doComplete.length > 2; })];
+                        case 1:
+                            settings = _b.sent();
+                            result = mode.doComplete(document, textDocumentPosition.position, settings, completionParticipants);
+                            result.items = pathCompletionList.items.concat(result.items);
+                            if (emmetCompletionList && emmetCompletionList.items) {
+                                cachedCompletionList = result;
+                                if (emmetCompletionList.items.length && hexColorRegex.test(emmetCompletionList.items[0].label) && result.items.some(function (x) { return x.label === emmetCompletionList.items[0].label; })) {
+                                    emmetCompletionList.items.shift();
+                                }
+                                return [2 /*return*/, { isIncomplete: emmetCompletionList.isIncomplete || result.isIncomplete, items: emmetCompletionList.items.concat(result.items) }];
+                            }
+                            return [2 /*return*/, result];
+                    }
+                });
+            }); }, null, "Error while computing completions for " + textDocumentPosition.textDocument.uri)];
     });
 }); });
 connection.onCompletionResolve(function (item) {
-    var data = item.data;
-    if (data && data.languageId && data.uri) {
-        var mode = languageModes.getMode(data.languageId);
-        var document = documents.get(data.uri);
-        if (mode && mode.doResolve && document) {
-            return mode.doResolve(document, item);
+    return errors_1.runSafe(function () {
+        var data = item.data;
+        if (data && data.languageId && data.uri) {
+            var mode = languageModes.getMode(data.languageId);
+            var document = documents.get(data.uri);
+            if (mode && mode.doResolve && document) {
+                return mode.doResolve(document, item);
+            }
         }
-    }
-    return item;
+        return item;
+    }, null, "Error while resolving completion proposal");
 });
 connection.onHover(function (textDocumentPosition) {
-    var document = documents.get(textDocumentPosition.textDocument.uri);
-    var mode = languageModes.getModeAtPosition(document, textDocumentPosition.position);
-    if (mode && mode.doHover) {
-        return mode.doHover(document, textDocumentPosition.position);
-    }
-    return null;
+    return errors_1.runSafe(function () {
+        var document = documents.get(textDocumentPosition.textDocument.uri);
+        var mode = languageModes.getModeAtPosition(document, textDocumentPosition.position);
+        if (mode && mode.doHover) {
+            return mode.doHover(document, textDocumentPosition.position);
+        }
+        return null;
+    }, null, "Error while computing hover for " + textDocumentPosition.textDocument.uri);
 });
 connection.onDocumentHighlight(function (documentHighlightParams) {
-    var document = documents.get(documentHighlightParams.textDocument.uri);
-    var mode = languageModes.getModeAtPosition(document, documentHighlightParams.position);
-    if (mode && mode.findDocumentHighlight) {
-        return mode.findDocumentHighlight(document, documentHighlightParams.position);
-    }
-    return [];
+    return errors_1.runSafe(function () {
+        var document = documents.get(documentHighlightParams.textDocument.uri);
+        var mode = languageModes.getModeAtPosition(document, documentHighlightParams.position);
+        if (mode && mode.findDocumentHighlight) {
+            return mode.findDocumentHighlight(document, documentHighlightParams.position);
+        }
+        return [];
+    }, [], "Error while computing document highlights for " + documentHighlightParams.textDocument.uri);
 });
 connection.onDefinition(function (definitionParams) {
-    var document = documents.get(definitionParams.textDocument.uri);
-    var mode = languageModes.getModeAtPosition(document, definitionParams.position);
-    if (mode && mode.findDefinition) {
-        return mode.findDefinition(document, definitionParams.position);
-    }
-    return [];
+    return errors_1.runSafe(function () {
+        var document = documents.get(definitionParams.textDocument.uri);
+        var mode = languageModes.getModeAtPosition(document, definitionParams.position);
+        if (mode && mode.findDefinition) {
+            return mode.findDefinition(document, definitionParams.position);
+        }
+        return [];
+    }, null, "Error while computing definitions for " + definitionParams.textDocument.uri);
 });
 connection.onReferences(function (referenceParams) {
-    var document = documents.get(referenceParams.textDocument.uri);
-    var mode = languageModes.getModeAtPosition(document, referenceParams.position);
-    if (mode && mode.findReferences) {
-        return mode.findReferences(document, referenceParams.position);
-    }
-    return [];
+    return errors_1.runSafe(function () {
+        var document = documents.get(referenceParams.textDocument.uri);
+        var mode = languageModes.getModeAtPosition(document, referenceParams.position);
+        if (mode && mode.findReferences) {
+            return mode.findReferences(document, referenceParams.position);
+        }
+        return [];
+    }, [], "Error while computing references for " + referenceParams.textDocument.uri);
 });
 connection.onSignatureHelp(function (signatureHelpParms) {
-    var document = documents.get(signatureHelpParms.textDocument.uri);
-    var mode = languageModes.getModeAtPosition(document, signatureHelpParms.position);
-    if (mode && mode.doSignatureHelp) {
-        return mode.doSignatureHelp(document, signatureHelpParms.position);
-    }
-    return null;
+    return errors_1.runSafe(function () {
+        var document = documents.get(signatureHelpParms.textDocument.uri);
+        var mode = languageModes.getModeAtPosition(document, signatureHelpParms.position);
+        if (mode && mode.doSignatureHelp) {
+            return mode.doSignatureHelp(document, signatureHelpParms.position);
+        }
+        return null;
+    }, null, "Error while computing signature help for " + signatureHelpParms.textDocument.uri);
 });
 connection.onDocumentRangeFormatting(function (formatParams) { return __awaiter(_this, void 0, void 0, function () {
-    var document, settings, unformattedTags, enabledModes;
+    var _this = this;
     return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                document = documents.get(formatParams.textDocument.uri);
-                return [4 /*yield*/, getDocumentSettings(document, function () { return true; })];
-            case 1:
-                settings = _a.sent();
-                if (!settings) {
-                    settings = globalSettings;
-                }
-                unformattedTags = settings && settings.html && settings.html.format && settings.html.format.unformatted || '';
-                enabledModes = { css: !unformattedTags.match(/\bstyle\b/), javascript: !unformattedTags.match(/\bscript\b/) };
-                return [2 /*return*/, formatting_1.format(languageModes, document, formatParams.range, formatParams.options, settings, enabledModes)];
-        }
+        return [2 /*return*/, errors_1.runSafe(function () { return __awaiter(_this, void 0, void 0, function () {
+                var document, settings, unformattedTags, enabledModes;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            document = documents.get(formatParams.textDocument.uri);
+                            return [4 /*yield*/, getDocumentSettings(document, function () { return true; })];
+                        case 1:
+                            settings = _a.sent();
+                            if (!settings) {
+                                settings = globalSettings;
+                            }
+                            unformattedTags = settings && settings.html && settings.html.format && settings.html.format.unformatted || '';
+                            enabledModes = { css: !unformattedTags.match(/\bstyle\b/), javascript: !unformattedTags.match(/\bscript\b/) };
+                            return [2 /*return*/, formatting_1.format(languageModes, document, formatParams.range, formatParams.options, settings, enabledModes)];
+                    }
+                });
+            }); }, [], "Error while formatting range for " + formatParams.textDocument.uri)];
     });
 }); });
 connection.onDocumentLinks(function (documentLinkParam) {
-    var document = documents.get(documentLinkParam.textDocument.uri);
-    var documentContext = {
-        resolveReference: function (ref, base) {
-            if (base) {
-                ref = url.resolve(base, ref);
-            }
-            if (ref[0] === '/') {
-                var root = getRootFolder(document.uri);
-                if (root) {
-                    return vscode_uri_1.default.file(path.join(root, ref)).toString();
+    return errors_1.runSafe(function () {
+        var document = documents.get(documentLinkParam.textDocument.uri);
+        var links = [];
+        if (document) {
+            var documentContext_2 = documentContext_1.getDocumentContext(document.uri, workspaceFolders);
+            languageModes.getAllModesInDocument(document).forEach(function (m) {
+                if (m.findDocumentLinks) {
+                    arrays_1.pushAll(links, m.findDocumentLinks(document, documentContext_2));
                 }
-            }
-            return url.resolve(document.uri, ref);
-        },
-    };
-    var links = [];
-    languageModes.getAllModesInDocument(document).forEach(function (m) {
-        if (m.findDocumentLinks) {
-            arrays_1.pushAll(links, m.findDocumentLinks(document, documentContext));
+            });
         }
-    });
-    return links;
+        return links;
+    }, [], "Error while document links for " + documentLinkParam.textDocument.uri);
 });
-function getRootFolder(docUri) {
-    if (workspaceFolders) {
-        for (var _i = 0, workspaceFolders_2 = workspaceFolders; _i < workspaceFolders_2.length; _i++) {
-            var folder = workspaceFolders_2[_i];
-            var folderURI = folder.uri;
-            if (!strings_1.endsWith(folderURI, '/')) {
-                folderURI = folderURI + '/';
-            }
-            if (strings_1.startsWith(docUri, folderURI)) {
-                return folderURI;
-            }
-        }
-        return void 0;
-    }
-    return workspacePath;
-}
 connection.onDocumentSymbol(function (documentSymbolParms) {
-    var document = documents.get(documentSymbolParms.textDocument.uri);
-    var symbols = [];
-    languageModes.getAllModesInDocument(document).forEach(function (m) {
-        if (m.findDocumentSymbols) {
-            arrays_1.pushAll(symbols, m.findDocumentSymbols(document));
-        }
-    });
-    return symbols;
-});
-connection.onRequest(protocol_colorProvider_proposed_1.DocumentColorRequest.type, function (params) {
-    var infos = [];
-    var document = documents.get(params.textDocument.uri);
-    if (document) {
+    return errors_1.runSafe(function () {
+        var document = documents.get(documentSymbolParms.textDocument.uri);
+        var symbols = [];
         languageModes.getAllModesInDocument(document).forEach(function (m) {
-            if (m.findDocumentColors) {
-                arrays_1.pushAll(infos, m.findDocumentColors(document));
+            if (m.findDocumentSymbols) {
+                arrays_1.pushAll(symbols, m.findDocumentSymbols(document));
             }
         });
-    }
-    return infos;
+        return symbols;
+    }, [], "Error while computing document symbols for " + documentSymbolParms.textDocument.uri);
+});
+connection.onRequest(protocol_colorProvider_proposed_1.DocumentColorRequest.type, function (params) {
+    return errors_1.runSafe(function () {
+        var infos = [];
+        var document = documents.get(params.textDocument.uri);
+        if (document) {
+            languageModes.getAllModesInDocument(document).forEach(function (m) {
+                if (m.findDocumentColors) {
+                    arrays_1.pushAll(infos, m.findDocumentColors(document));
+                }
+            });
+        }
+        return infos;
+    }, [], "Error while computing document colors for " + params.textDocument.uri);
 });
 connection.onRequest(protocol_colorProvider_proposed_1.ColorPresentationRequest.type, function (params) {
-    var document = documents.get(params.textDocument.uri);
-    if (document) {
-        var mode = languageModes.getModeAtPosition(document, params.range.start);
-        if (mode && mode.getColorPresentations) {
-            return mode.getColorPresentations(document, params.color, params.range);
-        }
-    }
-    return [];
-});
-connection.onRequest(TagCloseRequest.type, function (params) {
-    var document = documents.get(params.textDocument.uri);
-    if (document) {
-        var pos = params.position;
-        if (pos.character > 0) {
-            var mode = languageModes.getModeAtPosition(document, vscode_languageserver_1.Position.create(pos.line, pos.character - 1));
-            if (mode && mode.doAutoClose) {
-                return mode.doAutoClose(document, pos);
+    return errors_1.runSafe(function () {
+        var document = documents.get(params.textDocument.uri);
+        if (document) {
+            var mode = languageModes.getModeAtPosition(document, params.range.start);
+            if (mode && mode.getColorPresentations) {
+                return mode.getColorPresentations(document, params.color, params.range);
             }
         }
-    }
-    return null;
+        return [];
+    }, [], "Error while computing color presentations for " + params.textDocument.uri);
+});
+connection.onRequest(TagCloseRequest.type, function (params) {
+    return errors_1.runSafe(function () {
+        var document = documents.get(params.textDocument.uri);
+        if (document) {
+            var pos = params.position;
+            if (pos.character > 0) {
+                var mode = languageModes.getModeAtPosition(document, vscode_languageserver_1.Position.create(pos.line, pos.character - 1));
+                if (mode && mode.doAutoClose) {
+                    return mode.doAutoClose(document, pos);
+                }
+            }
+        }
+        return null;
+    }, null, "Error while computing tag close actions for " + params.textDocument.uri);
+});
+connection.onRequest(foldingProvider_proposed_1.FoldingRangesRequest.type, function (params) {
+    return errors_1.runSafe(function () {
+        var document = documents.get(params.textDocument.uri);
+        if (document) {
+            var mode = languageModes.getMode('html');
+            if (mode && mode.getFoldingRanges) {
+                return mode.getFoldingRanges(document);
+            }
+            return null;
+        }
+        return null;
+    }, null, "Error while computing folding regions for " + params.textDocument.uri);
 });
 // Listen on the connection
 connection.listen();
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\html\server\out/htmlServerMain.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\html\server\out/htmlServerMain.js.map

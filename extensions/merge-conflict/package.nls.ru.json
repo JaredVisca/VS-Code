@@ -1,4 +1,6 @@
 {
+	"displayName": "Объединить конфликт",
+	"description": "Выделение и команды для внутренних конфликтов слияния.",
 	"command.category": "Объединить конфликт",
 	"command.accept.all-current": "Принять все текущие",
 	"command.accept.all-incoming": "Принять все входящие",

@@ -6,7 +6,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const commandManager_1 = require("./utils/commandManager");
-const typescriptMain_1 = require("./typescriptMain");
+const typeScriptServiceClientHost_1 = require("./typeScriptServiceClientHost");
 const commands = require("./commands");
 const taskProvider_1 = require("./features/taskProvider");
 const plugins_1 = require("./utils/plugins");
@@ -17,6 +17,7 @@ const languageDescription_1 = require("./utils/languageDescription");
 const managedFileContext_1 = require("./utils/managedFileContext");
 const lazy_1 = require("./utils/lazy");
 const fileSchemes = require("./utils/fileSchemes");
+const logDirectoryProvider_1 = require("./utils/logDirectoryProvider");
 function activate(context) {
     const plugins = plugins_1.getContributedTypeScriptServerPlugins();
     const commandManager = new commandManager_1.CommandManager();
@@ -49,13 +50,11 @@ function activate(context) {
 exports.activate = activate;
 function createLazyClientHost(context, plugins, commandManager) {
     return lazy_1.lazy(() => {
-        const clientHost = new typescriptMain_1.TypeScriptServiceClientHost(languageDescription_1.standardLanguageDescriptions, context.workspaceState, plugins, commandManager);
+        const logDirectoryProvider = new logDirectoryProvider_1.default(context);
+        const clientHost = new typeScriptServiceClientHost_1.default(languageDescription_1.standardLanguageDescriptions, context.workspaceState, plugins, commandManager, logDirectoryProvider);
         context.subscriptions.push(clientHost);
-        const host = clientHost;
-        clientHost.serviceClient.onReady().then(() => {
-            context.subscriptions.push(ProjectStatus.create(host.serviceClient, host.serviceClient.telemetryReporter, path => new Promise(resolve => setTimeout(() => resolve(host.handles(path)), 750)), context.workspaceState));
-        }, () => {
-            // Nothing to do here. The client did show a message;
+        clientHost.serviceClient.onReady(() => {
+            context.subscriptions.push(ProjectStatus.create(clientHost.serviceClient, clientHost.serviceClient.telemetryReporter, path => new Promise(resolve => setTimeout(() => resolve(clientHost.handles(path)), 750)), context.workspaceState));
         });
         return clientHost;
     });
@@ -75,4 +74,4 @@ function isSupportedDocument(supportedLanguage, document) {
     }
     return fileSchemes.isSupportedScheme(document.uri.scheme);
 }
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/extension.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/extension.js.map

@@ -1,10 +1,28 @@
+"use strict";
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
+class Slug {
+    constructor(value) {
+        this.value = value;
+    }
+    static fromHeading(heading) {
+        const slugifiedHeading = encodeURI(heading.trim()
+            .toLowerCase()
+            .replace(/[\]\[\!\"\#\$\%\&\'\(\)\*\+\,\.\/\:\;\<\=\>\?\@\\\^\_\{\|\}\~\`]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/^\-+/, '')
+            .replace(/\-+$/, ''));
+        return new Slug(slugifiedHeading);
+    }
+    equals(other) {
+        return this.value === other.value;
+    }
+}
+exports.Slug = Slug;
 class TableOfContentsProvider {
     constructor(engine, document) {
         this.engine = engine;
@@ -22,13 +40,9 @@ class TableOfContentsProvider {
         return this.toc;
     }
     async lookup(fragment) {
-        const slug = TableOfContentsProvider.slugify(fragment);
-        for (const entry of await this.getToc()) {
-            if (entry.slug === slug) {
-                return entry.line;
-            }
-        }
-        return NaN;
+        const toc = await this.getToc();
+        const slug = Slug.fromHeading(fragment);
+        return toc.find(entry => entry.slug.equals(slug));
     }
     async buildToc(document) {
         const toc = [];
@@ -36,17 +50,13 @@ class TableOfContentsProvider {
         for (const heading of tokens.filter(token => token.type === 'heading_open')) {
             const lineNumber = heading.map[0];
             const line = document.lineAt(lineNumber);
-            const href = TableOfContentsProvider.slugify(line.text);
-            const level = TableOfContentsProvider.getHeaderLevel(heading.markup);
-            if (href) {
-                toc.push({
-                    slug: href,
-                    text: TableOfContentsProvider.getHeaderText(line.text),
-                    level: level,
-                    line: lineNumber,
-                    location: new vscode.Location(document.uri, line.range)
-                });
-            }
+            toc.push({
+                slug: Slug.fromHeading(line.text),
+                text: TableOfContentsProvider.getHeaderText(line.text),
+                level: TableOfContentsProvider.getHeaderLevel(heading.markup),
+                line: lineNumber,
+                location: new vscode.Location(document.uri, line.range)
+            });
         }
         return toc;
     }
@@ -64,14 +74,6 @@ class TableOfContentsProvider {
     static getHeaderText(header) {
         return header.replace(/^\s*#+\s*(.*?)\s*#*$/, (_, word) => word.trim());
     }
-    static slugify(header) {
-        return encodeURI(header.trim()
-            .toLowerCase()
-            .replace(/[\]\[\!\"\#\$\%\&\'\(\)\*\+\,\.\/\:\;\<\=\>\?\@\\\^\_\{\|\}\~\`]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/^\-+/, '')
-            .replace(/\-+$/, ''));
-    }
 }
 exports.TableOfContentsProvider = TableOfContentsProvider;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\markdown\out/tableOfContentsProvider.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\markdown\out/tableOfContentsProvider.js.map

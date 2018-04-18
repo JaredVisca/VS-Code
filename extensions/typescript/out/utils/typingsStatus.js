@@ -74,25 +74,15 @@ class AtaProgressReporter {
     }
     onTypesInstallerInitializationFailed() {
         if (vscode_1.workspace.getConfiguration('typescript').get('check.npmIsInstalled', true)) {
-            vscode_1.window.showWarningMessage(localize(1, null), {
+            vscode_1.window.showWarningMessage(localize(1, null, 'https://go.microsoft.com/fwlink/?linkid=847635'), {
                 title: localize(2, null),
                 id: 1
-            }, {
-                title: localize(3, null),
-                id: 2
-            }, {
-                title: localize(4, null),
-                id: 3,
-                isCloseAffordance: true
             }).then(selected => {
-                if (!selected || selected.id === 3) {
+                if (!selected) {
                     return;
                 }
                 switch (selected.id) {
                     case 1:
-                        vscode_1.commands.executeCommand('vscode.open', vscode_1.Uri.parse('https://go.microsoft.com/fwlink/?linkid=847635'));
-                        break;
-                    case 2:
                         const tsConfig = vscode_1.workspace.getConfiguration('typescript');
                         tsConfig.update('check.npmIsInstalled', false, true);
                         break;
@@ -102,4 +92,4 @@ class AtaProgressReporter {
     }
 }
 exports.AtaProgressReporter = AtaProgressReporter;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\typingsStatus.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\typingsStatus.js.map

@@ -9,8 +9,8 @@ const assert = require("assert");
 const vscode_1 = require("vscode");
 const testUtils_1 = require("./testUtils");
 const toggleComment_1 = require("../toggleComment");
-function toggleComment(...args) {
-    const result = toggleComment_1.toggleComment(...args);
+function toggleComment() {
+    const result = toggleComment_1.toggleComment();
     assert.ok(result);
     return result;
 }
@@ -184,6 +184,49 @@ suite('Tests for Toggle Comment action from Emmet (HTML)', () => {
             editor.selections = [
                 new vscode_1.Selection(3, 24, 4, 20),
                 new vscode_1.Selection(7, 2, 9, 10) // The <ul> one of of whose children is already commented
+            ];
+            return toggleComment().then(() => {
+                assert.equal(doc.getText(), expectedContents);
+                return Promise.resolve();
+            });
+        });
+    });
+    test('toggle comment with multiple cursors selecting parent and child nodes', () => {
+        const expectedContents = `
+	<div class="hello">
+		<ul>
+			<li><!--<span>Hello</span>--></li>
+			<!--<li><span>There</span></li>-->
+			<div><li><span>Bye</span></li></div>
+		</ul>
+		<!--<ul>
+			<li>Previously Commented Node</li>
+			<li>Another Node</li>
+		</ul>-->
+		<span/>
+		<!--<style>
+			.boo {
+				margin: 10px;
+				padding: 20px;
+			}
+			.hoo {
+				margin: 10px;
+				padding: 20px;
+			}
+		</style>-->
+	</div>
+	`;
+        return testUtils_1.withRandomFileEditor(contents, 'html', (editor, doc) => {
+            editor.selections = [
+                new vscode_1.Selection(3, 17, 3, 17),
+                new vscode_1.Selection(4, 5, 4, 5),
+                new vscode_1.Selection(4, 17, 4, 17),
+                new vscode_1.Selection(7, 3, 7, 3),
+                new vscode_1.Selection(9, 10, 9, 10),
+                new vscode_1.Selection(12, 3, 12, 3),
+                new vscode_1.Selection(14, 8, 14, 8),
+                new vscode_1.Selection(18, 3, 18, 3),
+                new vscode_1.Selection(19, 8, 19, 8) // 		and the fourth inside the css property inside the style tag
             ];
             return toggleComment().then(() => {
                 assert.equal(doc.getText(), expectedContents);
@@ -434,6 +477,65 @@ suite('Tests for Toggle Comment action from Emmet in nested css (SCSS)', () => {
 			padding: 10px;
 		}
 	}`;
+    test('toggle comment with multiple cursors selecting nested nodes (SCSS)', () => {
+        const expectedContents = `
+	.one {
+		/*height: 42px;*/
+
+		/*.two {
+			width: 42px;
+		}*/
+
+		.three {
+			/*padding: 10px;*/
+		}
+	}`;
+        return testUtils_1.withRandomFileEditor(contents, 'css', (editor, doc) => {
+            editor.selections = [
+                new vscode_1.Selection(2, 5, 2, 5),
+                new vscode_1.Selection(4, 4, 4, 4),
+                new vscode_1.Selection(5, 5, 5, 5),
+                new vscode_1.Selection(9, 5, 9, 5) // cursor inside a property inside a nested rule
+            ];
+            return toggleComment().then(() => {
+                assert.equal(doc.getText(), expectedContents);
+                return toggleComment().then(() => {
+                    assert.equal(doc.getText(), contents);
+                    return Promise.resolve();
+                });
+            });
+        });
+    });
+    test('toggle comment with multiple cursors selecting several nested nodes (SCSS)', () => {
+        const expectedContents = `
+	/*.one {
+		height: 42px;
+
+		.two {
+			width: 42px;
+		}
+
+		.three {
+			padding: 10px;
+		}
+	}*/`;
+        return testUtils_1.withRandomFileEditor(contents, 'css', (editor, doc) => {
+            editor.selections = [
+                new vscode_1.Selection(1, 3, 1, 3),
+                new vscode_1.Selection(2, 5, 2, 5),
+                new vscode_1.Selection(4, 4, 4, 4),
+                new vscode_1.Selection(5, 5, 5, 5),
+                new vscode_1.Selection(9, 5, 9, 5) // cursor inside a property inside a nested rule
+            ];
+            return toggleComment().then(() => {
+                assert.equal(doc.getText(), expectedContents);
+                return toggleComment().then(() => {
+                    assert.equal(doc.getText(), contents);
+                    return Promise.resolve();
+                });
+            });
+        });
+    });
     test('toggle comment with multiple cursors, but no selection (SCSS)', () => {
         const expectedContents = `
 	.one {
@@ -543,4 +645,4 @@ suite('Tests for Toggle Comment action from Emmet in nested css (SCSS)', () => {
         });
     });
 });
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\emmet\out/test\toggleComment.test.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\emmet\out/test\toggleComment.test.js.map

@@ -4,96 +4,73 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
-var path = require("path");
-var vscode_1 = require("vscode");
-var vscode_languageclient_1 = require("vscode-languageclient");
-var htmlEmptyTagsShared_1 = require("./htmlEmptyTagsShared");
-var tagClosing_1 = require("./tagClosing");
-var vscode_extension_telemetry_1 = require("vscode-extension-telemetry");
-var protocol_colorProvider_proposed_1 = require("vscode-languageserver-protocol/lib/protocol.colorProvider.proposed");
-var nls = require("vscode-nls");
-var localize = nls.loadMessageBundle(__filename);
+const path = require("path");
+const nls = require("vscode-nls");
+const localize = nls.loadMessageBundle(__filename);
+const vscode_1 = require("vscode");
+const vscode_languageclient_1 = require("vscode-languageclient");
+const htmlEmptyTagsShared_1 = require("./htmlEmptyTagsShared");
+const tagClosing_1 = require("./tagClosing");
+const vscode_extension_telemetry_1 = require("vscode-extension-telemetry");
+const foldingProvider_proposed_1 = require("./protocol/foldingProvider.proposed");
 var TagCloseRequest;
 (function (TagCloseRequest) {
     TagCloseRequest.type = new vscode_languageclient_1.RequestType('html/tag');
 })(TagCloseRequest || (TagCloseRequest = {}));
+let telemetryReporter;
+let foldingProviderRegistration = void 0;
+const foldingSetting = 'html.experimental.syntaxFolding';
 function activate(context) {
-    var toDispose = context.subscriptions;
-    var packageInfo = getPackageInfo(context);
-    var telemetryReporter = packageInfo && new vscode_extension_telemetry_1.default(packageInfo.name, packageInfo.version, packageInfo.aiKey);
-    if (telemetryReporter) {
-        toDispose.push(telemetryReporter);
-    }
+    let toDispose = context.subscriptions;
+    let packageInfo = getPackageInfo(context);
+    telemetryReporter = packageInfo && new vscode_extension_telemetry_1.default(packageInfo.name, packageInfo.version, packageInfo.aiKey);
     // The server is implemented in node
-    var serverModule = context.asAbsolutePath(path.join('server', 'out', 'htmlServerMain.js'));
+    let serverModule = context.asAbsolutePath(path.join('server', 'out', 'htmlServerMain.js'));
     // The debug options for the server
-    var debugOptions = { execArgv: ['--nolazy', '--inspect=6004'] };
+    let debugOptions = { execArgv: ['--nolazy', '--inspect=6045'] };
     // If the extension is launch in debug mode the debug server options are use
     // Otherwise the run options are used
-    var serverOptions = {
+    let serverOptions = {
         run: { module: serverModule, transport: vscode_languageclient_1.TransportKind.ipc },
         debug: { module: serverModule, transport: vscode_languageclient_1.TransportKind.ipc, options: debugOptions }
     };
-    var documentSelector = ['html', 'handlebars', 'razor'];
-    var embeddedLanguages = { css: true, javascript: true };
+    let documentSelector = ['html', 'handlebars', 'razor'];
+    let embeddedLanguages = { css: true, javascript: true };
     // Options to control the language client
-    var clientOptions = {
-        documentSelector: documentSelector,
+    let clientOptions = {
+        documentSelector,
         synchronize: {
-            configurationSection: ['html', 'css', 'javascript'],
+            configurationSection: ['html', 'css', 'javascript', 'emmet'],
         },
         initializationOptions: {
-            embeddedLanguages: embeddedLanguages
+            embeddedLanguages
         }
     };
     // Create the language client and start the client.
-    var client = new vscode_languageclient_1.LanguageClient('html', localize(0, null), serverOptions, clientOptions);
+    let client = new vscode_languageclient_1.LanguageClient('html', localize(0, null), serverOptions, clientOptions);
     client.registerProposedFeatures();
-    var disposable = client.start();
+    let disposable = client.start();
     toDispose.push(disposable);
-    client.onReady().then(function () {
-        disposable = vscode_1.languages.registerColorProvider(documentSelector, {
-            provideDocumentColors: function (document) {
-                var params = {
-                    textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document)
-                };
-                return client.sendRequest(protocol_colorProvider_proposed_1.DocumentColorRequest.type, params).then(function (symbols) {
-                    return symbols.map(function (symbol) {
-                        var range = client.protocol2CodeConverter.asRange(symbol.range);
-                        var color = new vscode_1.Color(symbol.color.red, symbol.color.green, symbol.color.blue, symbol.color.alpha);
-                        return new vscode_1.ColorInformation(range, color);
-                    });
-                });
-            },
-            provideColorPresentations: function (color, context) {
-                var params = {
-                    textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(context.document),
-                    color: color,
-                    range: client.code2ProtocolConverter.asRange(context.range)
-                };
-                return client.sendRequest(protocol_colorProvider_proposed_1.ColorPresentationRequest.type, params).then(function (presentations) {
-                    return presentations.map(function (p) {
-                        var presentation = new vscode_1.ColorPresentation(p.label);
-                        presentation.textEdit = p.textEdit && client.protocol2CodeConverter.asTextEdit(p.textEdit);
-                        presentation.additionalTextEdits = p.additionalTextEdits && client.protocol2CodeConverter.asTextEdits(p.additionalTextEdits);
-                        return presentation;
-                    });
-                });
-            }
-        });
-        toDispose.push(disposable);
-        var tagRequestor = function (document, position) {
-            var param = client.code2ProtocolConverter.asTextDocumentPositionParams(document, position);
+    client.onReady().then(() => {
+        let tagRequestor = (document, position) => {
+            let param = client.code2ProtocolConverter.asTextDocumentPositionParams(document, position);
             return client.sendRequest(TagCloseRequest.type, param);
         };
         disposable = tagClosing_1.activateTagClosing(tagRequestor, { html: true, handlebars: true, razor: true }, 'html.autoClosingTags');
         toDispose.push(disposable);
-        disposable = client.onTelemetry(function (e) {
+        disposable = client.onTelemetry(e => {
             if (telemetryReporter) {
                 telemetryReporter.sendTelemetryEvent(e.key, e.data);
             }
         });
         toDispose.push(disposable);
+        initFoldingProvider();
+        toDispose.push(vscode_1.workspace.onDidChangeConfiguration(c => {
+            if (c.affectsConfiguration(foldingSetting)) {
+                initFoldingProvider();
+            }
+        }));
+        toDispose.push({ dispose: () => foldingProviderRegistration && foldingProviderRegistration.dispose() });
     });
     vscode_1.languages.setLanguageConfiguration('html', {
         indentationRules: {
@@ -103,12 +80,12 @@ function activate(context) {
         wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\$\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\s]+)/g,
         onEnterRules: [
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 afterText: /^<\/([_:\w][_:\w-.\d]*)\s*>/i,
                 action: { indentAction: vscode_1.IndentAction.IndentOutdent }
             },
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 action: { indentAction: vscode_1.IndentAction.Indent }
             }
         ],
@@ -117,12 +94,12 @@ function activate(context) {
         wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\$\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\s]+)/g,
         onEnterRules: [
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 afterText: /^<\/([_:\w][_:\w-.\d]*)\s*>/i,
                 action: { indentAction: vscode_1.IndentAction.IndentOutdent }
             },
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 action: { indentAction: vscode_1.IndentAction.Indent }
             }
         ],
@@ -131,30 +108,30 @@ function activate(context) {
         wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\$\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\s]+)/g,
         onEnterRules: [
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))([_:\\w][_:\\w-.\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 afterText: /^<\/([_:\w][_:\w-.\d]*)\s*>/i,
                 action: { indentAction: vscode_1.IndentAction.IndentOutdent }
             },
             {
-                beforeText: new RegExp("<(?!(?:" + htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|') + "))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$", 'i'),
+                beforeText: new RegExp(`<(?!(?:${htmlEmptyTagsShared_1.EMPTY_ELEMENTS.join('|')}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, 'i'),
                 action: { indentAction: vscode_1.IndentAction.Indent }
             }
         ],
     });
-    var regionCompletionRegExpr = /^(\s*)(<(!(-(-\s*(#\w*)?)?)?)?)?/;
+    const regionCompletionRegExpr = /^(\s*)(<(!(-(-\s*(#\w*)?)?)?)?)?$/;
     vscode_1.languages.registerCompletionItemProvider(documentSelector, {
-        provideCompletionItems: function (doc, pos) {
-            var lineUntilPos = doc.getText(new vscode_1.Range(new vscode_1.Position(pos.line, 0), pos));
-            var match = lineUntilPos.match(regionCompletionRegExpr);
+        provideCompletionItems(doc, pos) {
+            let lineUntilPos = doc.getText(new vscode_1.Range(new vscode_1.Position(pos.line, 0), pos));
+            let match = lineUntilPos.match(regionCompletionRegExpr);
             if (match) {
-                var range = new vscode_1.Range(new vscode_1.Position(pos.line, match[1].length), pos);
-                var beginProposal = new vscode_1.CompletionItem('#region', vscode_1.CompletionItemKind.Snippet);
+                let range = new vscode_1.Range(new vscode_1.Position(pos.line, match[1].length), pos);
+                let beginProposal = new vscode_1.CompletionItem('#region', vscode_1.CompletionItemKind.Snippet);
                 beginProposal.range = range;
                 beginProposal.insertText = new vscode_1.SnippetString('<!-- #region $1-->');
                 beginProposal.documentation = localize(1, null);
                 beginProposal.filterText = match[2];
                 beginProposal.sortText = 'za';
-                var endProposal = new vscode_1.CompletionItem('#endregion', vscode_1.CompletionItemKind.Snippet);
+                let endProposal = new vscode_1.CompletionItem('#endregion', vscode_1.CompletionItemKind.Snippet);
                 endProposal.range = range;
                 endProposal.insertText = new vscode_1.SnippetString('<!-- #endregion -->');
                 endProposal.documentation = localize(2, null);
@@ -165,10 +142,33 @@ function activate(context) {
             return null;
         }
     });
+    function initFoldingProvider() {
+        let enable = vscode_1.workspace.getConfiguration().get(foldingSetting);
+        if (enable) {
+            if (!foldingProviderRegistration) {
+                foldingProviderRegistration = vscode_1.languages.registerFoldingProvider(documentSelector, {
+                    provideFoldingRanges(document) {
+                        return client.sendRequest(foldingProvider_proposed_1.FoldingRangesRequest.type, { textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document) }).then(res => {
+                            if (res && Array.isArray(res.ranges)) {
+                                return new vscode_1.FoldingRangeList(res.ranges.map(r => new vscode_1.FoldingRange(r.startLine, r.endLine, r.type)));
+                            }
+                            return null;
+                        });
+                    }
+                });
+            }
+        }
+        else {
+            if (foldingProviderRegistration) {
+                foldingProviderRegistration.dispose();
+                foldingProviderRegistration = void 0;
+            }
+        }
+    }
 }
 exports.activate = activate;
 function getPackageInfo(context) {
-    var extensionPackage = require(context.asAbsolutePath('./package.json'));
+    let extensionPackage = require(context.asAbsolutePath('./package.json'));
     if (extensionPackage) {
         return {
             name: extensionPackage.name,
@@ -177,5 +177,9 @@ function getPackageInfo(context) {
         };
     }
     return null;
-}
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\html\client\out/htmlMain.js.map
+}
+function deactivate() {
+    return telemetryReporter ? telemetryReporter.dispose() : Promise.resolve(null);
+}
+exports.deactivate = deactivate;
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\html\client\out/htmlMain.js.map

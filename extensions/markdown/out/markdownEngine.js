@@ -48,7 +48,7 @@ class MarkdownEngine {
                     return `<pre class="hljs"><code><div>${this.md.utils.escapeHtml(str)}</div></code></pre>`;
                 }
             }).use(mdnh, {
-                slugify: (header) => tableOfContentsProvider_1.TableOfContentsProvider.slugify(header)
+                slugify: (header) => tableOfContentsProvider_1.Slug.fromHeading(header).value
             });
             for (const plugin of this.plugins) {
                 this.usePlugin(plugin);
@@ -121,8 +121,9 @@ class MarkdownEngine {
         md.normalizeLink = (link) => {
             try {
                 let uri = vscode.Uri.parse(link);
-                if (!uri.scheme && uri.path && !uri.fragment) {
+                if (!uri.scheme && uri.path) {
                     // Assume it must be a file
+                    const fragment = uri.fragment;
                     if (uri.path[0] === '/') {
                         const root = vscode.workspace.getWorkspaceFolder(this.currentDocument);
                         if (root) {
@@ -132,7 +133,10 @@ class MarkdownEngine {
                     else {
                         uri = vscode.Uri.file(path.join(path.dirname(this.currentDocument.path), uri.path));
                     }
-                    return normalizeLink(uri.toString(true));
+                    if (fragment) {
+                        uri = uri.with({ fragment });
+                    }
+                    return normalizeLink(uri.with({ scheme: 'vscode-workspace-resource' }).toString(true));
                 }
             }
             catch (e) {
@@ -150,4 +154,4 @@ class MarkdownEngine {
     }
 }
 exports.MarkdownEngine = MarkdownEngine;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\markdown\out/markdownEngine.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\markdown\out/markdownEngine.js.map

@@ -43,8 +43,8 @@ function createLaunchArg(useSubsytemLinux, useExternalConsole, cwd, executable, 
         return {
             cwd: cwd,
             executable: subsystemLinuxPath,
-            args: ['-ic', bashCommand],
-            combined: [subsystemLinuxPath].concat(['-ic', bashCommand]),
+            args: ['-c', bashCommand],
+            combined: [subsystemLinuxPath].concat(['-c', bashCommand]),
             localRoot: cwd,
             remoteRoot: windowsPathToWSLPath(cwd)
         };

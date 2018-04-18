@@ -44,7 +44,7 @@ log('ELECTRON_RUN_AS_NODE: ' + process.env['ELECTRON_RUN_AS_NODE']);
     process.__defineGetter__('stderr', function () { return stdErrStream; });
     var fsWriteSyncString = function (fd, str, _position, encoding) {
         //  fs.writeSync(fd, string[, position[, encoding]]);
-        var buf = new Buffer(str, encoding || 'utf8');
+        var buf = Buffer.from(str, encoding || 'utf8');
         return fsWriteSyncBuffer(fd, buf, 0, buf.length);
     };
     var fsWriteSyncBuffer = function (fd, buffer, off, len) {
@@ -159,4 +159,4 @@ log('ELECTRON_RUN_AS_NODE: ' + process.env['ELECTRON_RUN_AS_NODE']);
         process.stdout.write('ready');
     });
 })();
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\electronForkStart.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\electronForkStart.js.map

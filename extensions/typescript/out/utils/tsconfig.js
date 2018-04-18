@@ -10,18 +10,24 @@ function isImplicitProjectConfigFile(configFileName) {
     return configFileName.indexOf('/dev/null/') === 0;
 }
 exports.isImplicitProjectConfigFile = isImplicitProjectConfigFile;
-function getEmptyConfig(isTypeScriptProject, config) {
-    const compilerOptions = [
-        '"target": "ES6"',
-        '"module": "commonjs"',
-        '"jsx": "preserve"',
-    ];
-    if (!isTypeScriptProject && config.checkJs) {
-        compilerOptions.push('"checkJs": true');
+function inferredProjectConfig(config) {
+    const base = {
+        module: 'commonjs',
+        target: 'es2016',
+        jsx: 'preserve'
+    };
+    if (config.checkJs) {
+        base.checkJs = true;
     }
-    if (!isTypeScriptProject && config.experimentalDecorators) {
-        compilerOptions.push('"experimentalDecorators": true');
+    if (config.experimentalDecorators) {
+        base.experimentalDecorators = true;
     }
+    return base;
+}
+exports.inferredProjectConfig = inferredProjectConfig;
+function inferredProjectConfigSnippet(config) {
+    const baseConfig = inferredProjectConfig(config);
+    const compilerOptions = Object.keys(baseConfig).map(key => `"${key}": ${JSON.stringify(baseConfig[key])}`);
     return new vscode.SnippetString(`{
 	"compilerOptions": {
 		${compilerOptions.join(',\n\t\t')}$0
@@ -43,10 +49,10 @@ async function openOrCreateConfigFile(isTypeScriptProject, rootPath, config) {
         const doc = await vscode.workspace.openTextDocument(configFile.with({ scheme: 'untitled' }));
         const editor = await vscode.window.showTextDocument(doc, col);
         if (editor.document.getText().length === 0) {
-            await editor.insertSnippet(getEmptyConfig(isTypeScriptProject, config));
+            await editor.insertSnippet(inferredProjectConfigSnippet(config));
         }
         return editor;
     }
 }
 exports.openOrCreateConfigFile = openOrCreateConfigFile;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\tsconfig.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\tsconfig.js.map

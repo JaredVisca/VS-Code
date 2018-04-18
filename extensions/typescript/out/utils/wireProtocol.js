@@ -7,13 +7,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const DefaultSize = 8192;
 const ContentLength = 'Content-Length: ';
 const ContentLengthSize = Buffer.byteLength(ContentLength, 'utf8');
-const Blank = new Buffer(' ', 'utf8')[0];
-const BackslashR = new Buffer('\r', 'utf8')[0];
-const BackslashN = new Buffer('\n', 'utf8')[0];
+const Blank = Buffer.from(' ', 'utf8')[0];
+const BackslashR = Buffer.from('\r', 'utf8')[0];
+const BackslashN = Buffer.from('\n', 'utf8')[0];
 class ProtocolBuffer {
     constructor() {
         this.index = 0;
-        this.buffer = new Buffer(DefaultSize);
+        this.buffer = Buffer.allocUnsafe(DefaultSize);
     }
     append(data) {
         let toAppend = null;
@@ -21,7 +21,7 @@ class ProtocolBuffer {
             toAppend = data;
         }
         else {
-            toAppend = new Buffer(data, 'utf8');
+            toAppend = Buffer.from(data, 'utf8');
         }
         if (this.buffer.length - this.index >= toAppend.length) {
             toAppend.copy(this.buffer, this.index, 0, toAppend.length);
@@ -29,7 +29,7 @@ class ProtocolBuffer {
         else {
             let newSize = (Math.ceil((this.index + toAppend.length) / DefaultSize) + 1) * DefaultSize;
             if (this.index === 0) {
-                this.buffer = new Buffer(newSize);
+                this.buffer = Buffer.allocUnsafe(newSize);
                 toAppend.copy(this.buffer, 0, 0, toAppend.length);
             }
             else {
@@ -112,4 +112,4 @@ class Reader {
     }
 }
 exports.Reader = Reader;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\wireProtocol.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\wireProtocol.js.map

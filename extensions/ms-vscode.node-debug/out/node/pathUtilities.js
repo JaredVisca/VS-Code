@@ -128,10 +128,11 @@ exports.mkdirs = mkdirs;
 /*
  * Lookup the given program on the PATH and return its absolute path on success and undefined otherwise.
  */
-function findOnPath(program) {
+function findOnPath(program, args_env) {
+    const env = extendObject(extendObject({}, process.env), args_env);
     let locator;
     if (process.platform === 'win32') {
-        const windir = process.env['WINDIR'] || 'C:\\Windows';
+        const windir = env['WINDIR'] || 'C:\\Windows';
         locator = Path.join(windir, 'System32', 'where.exe');
     }
     else {
@@ -139,10 +140,10 @@ function findOnPath(program) {
     }
     try {
         if (FS.existsSync(locator)) {
-            const lines = CP.execSync(`${locator} ${program}`).toString().split(/\r?\n/);
+            const lines = CP.execSync(`${locator} ${program}`, { env: env }).toString().split(/\r?\n/);
             if (process.platform === 'win32') {
                 // return the first path that has a executable extension
-                const executableExtensions = process.env['PATHEXT'].toUpperCase();
+                const executableExtensions = env['PATHEXT'].toUpperCase();
                 for (const path of lines) {
                     const ext = Path.extname(path).toUpperCase();
                     if (ext && executableExtensions.indexOf(ext + ';') > 0) {
@@ -173,9 +174,10 @@ exports.findOnPath = findOnPath;
 /*
  *
  */
-function findExecutable(program) {
+function findExecutable(program, args_env) {
+    const env = extendObject(extendObject({}, process.env), args_env);
     if (process.platform === 'win32' && !Path.extname(program)) {
-        const PATHEXT = process.env['PATHEXT'];
+        const PATHEXT = env['PATHEXT'];
         if (PATHEXT) {
             const executableExtensions = PATHEXT.split(';');
             for (const extension of executableExtensions) {

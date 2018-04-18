@@ -80,8 +80,10 @@ function toggleSkippingFile(path) {
         const activeEditor = vscode.window.activeTextEditor;
         path = activeEditor && activeEditor.document.fileName;
     }
-    const args = typeof path === 'string' ? { path } : { sourceReference: path };
-    vscode.commands.executeCommand('workbench.customDebugRequest', 'toggleSkipFileStatus', args);
+    if (path && vscode.debug.activeDebugSession) {
+        const args = typeof path === 'string' ? { path } : { sourceReference: path };
+        vscode.debug.activeDebugSession.customRequest('toggleSkipFileStatus', args);
+    }
 }
 
 //# sourceMappingURL=extension.js.map

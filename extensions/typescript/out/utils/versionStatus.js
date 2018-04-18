@@ -9,7 +9,7 @@ const languageModeIds = require("./languageModeIds");
 class VersionStatus {
     constructor(normalizePath) {
         this.normalizePath = normalizePath;
-        this.versionBarEntry = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, Number.MIN_VALUE);
+        this.versionBarEntry = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99 /* to the right of editor status (100) */);
         this.onChangeEditorSub = vscode.window.onDidChangeActiveTextEditor(this.showHideStatus, this);
     }
     dispose() {
@@ -31,8 +31,11 @@ class VersionStatus {
         if (vscode.languages.match([languageModeIds.typescript, languageModeIds.typescriptreact], doc)) {
             if (this.normalizePath(doc.uri)) {
                 this.versionBarEntry.show();
-                return;
             }
+            else {
+                this.versionBarEntry.hide();
+            }
+            return;
         }
         if (!vscode.window.activeTextEditor.viewColumn) {
             // viewColumn is undefined for the debug/output panel, but we still want
@@ -43,4 +46,4 @@ class VersionStatus {
     }
 }
 exports.default = VersionStatus;
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\typescript\out/utils\versionStatus.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\typescript\out/utils\versionStatus.js.map

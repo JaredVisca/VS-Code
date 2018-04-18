@@ -1,4 +1,6 @@
 {
+	"displayName": "Fonctionnalités de langage CSS",
+	"description": "Fournit une prise en charge riche de langage pour les fichiers CSS, LESS et SCSS",
 	"css.title": "CSS",
 	"css.lint.argumentsInColorFunction.desc": "Nombre de paramètres non valide",
 	"css.lint.boxModel.desc": "Ne pas utiliser la largeur ou la hauteur avec une marge intérieure ou une bordure",

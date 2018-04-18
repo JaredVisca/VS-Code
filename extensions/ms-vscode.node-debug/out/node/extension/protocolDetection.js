@@ -3,22 +3,24 @@
  *--------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+const nls = require("vscode-nls");
 const cp = require("child_process");
 const utilities_1 = require("./utilities");
 const net = require("net");
 const WSL = require("../wslSupport");
+const localize = nls.loadMessageBundle(__filename);
 exports.INSPECTOR_PORT_DEFAULT = 9229;
 exports.LEGACY_PORT_DEFAULT = 5858;
 // For launch, use inspector protocol starting with v8 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 80000;
-function detectDebugType(config) {
+function detectDebugType(config, logger) {
     switch (config.request) {
         case 'attach':
-            return detectProtocolForAttach(config).then(protocol => {
+            return detectProtocolForAttach(config, logger).then(protocol => {
                 return protocol === 'inspector' ? 'node2' : 'node';
             });
         case 'launch':
-            return Promise.resolve(detectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
+            return Promise.resolve(detectProtocolForLaunch(config, logger) === 'inspector' ? 'node2' : 'node');
         default:
             // should not happen
             break;
@@ -29,14 +31,9 @@ exports.detectDebugType = detectDebugType;
 /**
  * Detect which debug protocol is being used for a running node process.
  */
-function detectProtocolForAttach(config) {
+function detectProtocolForAttach(config, logger) {
     const address = config.address || '127.0.0.1';
     const port = config.port;
-    if (config.processId) {
-        // this is only supported for legacy protocol
-        utilities_1.log(utilities_1.localize('protocol.switch.attach.process', "Debugging with legacy protocol because attaching to a process by ID is only supported for legacy protocol."));
-        return Promise.resolve('legacy');
-    }
     const socket = new net.Socket();
     const cleanup = () => {
         try {
@@ -49,15 +46,15 @@ function detectProtocolForAttach(config) {
     };
     return new Promise((resolve, reject) => {
         socket.once('data', data => {
-            let reason;
+            let reason = undefined;
             let protocol;
             const dataStr = data.toString();
             if (dataStr.indexOf('WebSockets request was expected') >= 0) {
-                reason = utilities_1.localize('protocol.switch.inspector.detected', "Debugging with inspector protocol because it was detected.");
+                logger.debug('Debugging with inspector protocol because it was detected.');
                 protocol = 'inspector';
             }
             else {
-                reason = utilities_1.localize('protocol.switch.legacy.detected', "Debugging with legacy protocol because it was detected.");
+                reason = localize(0, null);
                 protocol = 'legacy';
             }
             resolve({ reason, protocol });
@@ -76,39 +73,48 @@ function detectProtocolForAttach(config) {
         }, 2000);
     }).catch(err => {
         return {
-            reason: utilities_1.localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node.js version could not be determined ({0})", err.toString()),
+            reason: localize(1, null, err.toString()),
             protocol: 'legacy'
         };
     }).then(result => {
         cleanup();
-        utilities_1.log(result.reason);
+        if (result.reason) {
+            utilities_1.writeToConsole(result.reason);
+            logger.debug(result.reason);
+        }
         return result.protocol;
     });
 }
-function detectProtocolForLaunch(config) {
+function detectProtocolForLaunch(config, logger) {
     if (config.runtimeExecutable) {
-        utilities_1.log(utilities_1.localize('protocol.switch.runtime.set', "Debugging with inspector protocol because a runtime executable is set."));
+        logger.debug('Debugging with inspector protocol because a runtime executable is set.');
         return 'inspector';
     }
     else {
         // only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-        const result = WSL.spawnSync(config.useWSL, 'node', ['--version']);
+        let env = process.env;
+        if (config.env) {
+            env = utilities_1.extendObject(utilities_1.extendObject({}, process.env), config.env);
+        }
+        const result = WSL.spawnSync(config.useWSL, 'node', ['--version'], { shell: true, env: env });
         const semVerString = result.stdout ? result.stdout.toString() : undefined;
         if (semVerString) {
             config.__nodeVersion = semVerString.trim();
             if (semVerStringToInt(config.__nodeVersion) >= InspectorMinNodeVersionLaunch) {
-                utilities_1.log(utilities_1.localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node.js {0} was detected.", config.__nodeVersion));
+                logger.debug(`Debugging with inspector protocol because Node.js ${config.__nodeVersion} was detected.`);
                 return 'inspector';
             }
             else {
-                utilities_1.log(utilities_1.localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", config.__nodeVersion));
+                utilities_1.writeToConsole(localize(2, null, config.__nodeVersion));
+                logger.debug(`Debugging with legacy protocol because Node.js ${config.__nodeVersion} was detected.`);
+                return 'legacy';
             }
         }
         else {
-            utilities_1.log(utilities_1.localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node.js version could not be determined."));
+            logger.debug('Debugging with inspector protocol because Node.js version could not be determined.');
+            return 'inspector';
         }
     }
-    return undefined;
 }
 /**
  * convert the 3 parts of a semVer string into a single number

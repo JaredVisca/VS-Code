@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+var nls = require("vscode-nls");
+var localize = nls.loadMessageBundle(__filename);
 var vscode = require("vscode");
 var jsonc_parser_1 = require("jsonc-parser");
 var path = require("path");
 var settingsDocumentHelper_1 = require("./settingsDocumentHelper");
-var nls = require("vscode-nls");
-var localize = nls.loadMessageBundle(__filename);
 var decoration = vscode.window.createTextEditorDecorationType({
     color: '#9e9e9e'
 });
@@ -32,9 +32,39 @@ function activate(context) {
         }
     }, null, context.subscriptions));
     updateLaunchJsonDecorations(vscode.window.activeTextEditor);
+    context.subscriptions.push(vscode.workspace.onWillSaveTextDocument(function (e) {
+        if (!e.document.fileName.endsWith('/settings.json')) {
+            return;
+        }
+        autoFixSettingsJSON(e);
+    }));
     var _a;
 }
 exports.activate = activate;
+function autoFixSettingsJSON(willSaveEvent) {
+    var document = willSaveEvent.document;
+    var text = document.getText();
+    var edit = new vscode.WorkspaceEdit();
+    var lastEndOfSomething = -1;
+    jsonc_parser_1.visit(text, {
+        onArrayEnd: function (offset, length) {
+            lastEndOfSomething = offset + length;
+        },
+        onLiteralValue: function (value, offset, length) {
+            lastEndOfSomething = offset + length;
+        },
+        onObjectEnd: function (offset, length) {
+            lastEndOfSomething = offset + length;
+        },
+        onError: function (error, offset, length) {
+            if (error === jsonc_parser_1.ParseErrorCode.CommaExpected && lastEndOfSomething > -1) {
+                var fixPosition = document.positionAt(lastEndOfSomething);
+                edit.insert(document.uri, fixPosition, ',');
+            }
+        }
+    });
+    willSaveEvent.waitUntil(vscode.workspace.applyEdit(edit));
+}
 function registerKeybindingsCompletions() {
     var commands = vscode.commands.getCommands(true);
     return vscode.languages.registerCompletionItemProvider({ pattern: '**/keybindings.json' }, {
@@ -181,4 +211,4 @@ vscode.languages.registerDocumentSymbolProvider({ pattern: '**/launch.json', lan
         return result;
     }
 });
-//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/0759f77bb8d86658bc935a10a64f6182c5a1eeba/extensions\configuration-editing\out/extension.js.map
+//# sourceMappingURL=https://ticino.blob.core.windows.net/sourcemaps/79b44aa704ce542d8ca4a3cc44cfca566e7720f1/extensions\configuration-editing\out/extension.js.map

@@ -1,4 +1,6 @@
 {
+	"displayName": "Funzionalità del linguaggio CSS",
+	"description": "Offre un supporto avanzato per i file CSS, LESS e SCSS",
 	"css.title": "CSS",
 	"css.lint.argumentsInColorFunction.desc": "Numero di parametri non valido",
 	"css.lint.boxModel.desc": "Non usare width o height con padding o border",
